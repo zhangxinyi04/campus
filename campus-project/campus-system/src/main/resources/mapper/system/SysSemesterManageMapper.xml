@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.z.system.mapper.SysSemesterManageMapper">
+
+    <resultMap type="SysSemesterManage" id="SysSemesterManageResult">
+        <id property="semesterId" column="semester_id"/>
+        <result property="name" column="name"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <select id="selectSemester" resultMap="SysSemesterManageResult">
+        select semester_id, name, status
+        from sys_semester
+        order by semester_id desc LIMIT 1;
+    </select>
+    <select id="selectSemesterByConditions" parameterType="SysSemesterManage" resultMap="SysSemesterManageResult">
+        select semester_id, name, status
+        from sys_semester
+        <where>
+            <if test="semesterId != null ">and semester_id = #{semesterId}</if>
+            <if test="status !=null">and status = #{status}</if>
+        </where>
+        order by semester_id desc
+    </select>
+    <insert id="insertSemester">
+        insert into sys_semester(semester_id,name) values
+        <foreach item="item" index="index" collection="list" separator=",">
+            (#{item.semesterId},#{item.name})
+        </foreach>
+    </insert>
+    <update id="updateSemester" parameterType="SysSemesterManage">
+        update sys_semester
+        <set>
+            <if test="status !=null">status = #{status},</if>
+        </set>
+        <where>
+            <if test="semesterId !=null">semester_id = #{semesterId}</if>
+        </where>
+    </update>
+    <select id="selectAllSemester" resultMap="SysSemesterManageResult">
+        select semester_id, name, status
+        from sys_semester
+        order by semester_id desc
+    </select>
+</mapper> 

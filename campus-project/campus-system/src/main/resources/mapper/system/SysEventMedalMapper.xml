@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.z.system.mapper.SysEventMedalMapper">
+    
+    <resultMap type="SysEventMedal" id="SysEventMedalResult">
+        <result property="eventMedalId"    column="event_medal_id"    />
+        <result property="eventMedalName"    column="event_medal_name"    />
+        <result property="url"    column="url"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="delFlag"    column="del_flag"    />
+    </resultMap>
+
+    <sql id="selectSysEventMedalVo">
+        select event_medal_id, event_medal_name, url, create_time, del_flag from sys_event_medal
+    </sql>
+
+    <select id="selectSysEventMedalList" parameterType="SysEventMedal" resultMap="SysEventMedalResult">
+        <include refid="selectSysEventMedalVo"/>
+       where del_flag = '0'
+    </select>
+    
+    <select id="selectSysEventMedalByEventMedalId" parameterType="Long" resultMap="SysEventMedalResult">
+        <include refid="selectSysEventMedalVo"/>
+        where event_medal_id = #{eventMedalId}
+    </select>
+
+    <insert id="insertSysEventMedal" parameterType="SysEventMedal">
+        insert into sys_event_medal
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="eventMedalName != null">event_medal_name,</if>
+            <if test="url != null">url,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="delFlag != null">del_flag,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="eventMedalName != null">#{eventMedalName},</if>
+            <if test="url != null">#{url},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+         </trim>
+    </insert>
+
+    <update id="updateSysEventMedal" parameterType="SysEventMedal">
+        update sys_event_medal
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="eventMedalName != null">event_medal_name = #{eventMedalName},</if>
+            <if test="url != null">url = #{url},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where event_medal_id = #{eventMedalId}
+    </update>
+
+    <delete id="deleteSysEventMedalByEventMedalId" parameterType="Long">
+        delete from sys_event_medal where event_medal_id = #{eventMedalId}
+    </delete>
+
+    <delete id="deleteSysEventMedalByEventMedalIds" parameterType="String">
+        delete from sys_event_medal where event_medal_id in 
+        <foreach item="eventMedalId" collection="array" open="(" separator="," close=")">
+            #{eventMedalId}
+        </foreach>
+    </delete>
+</mapper>

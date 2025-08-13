@@ -1,0 +1,365 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.z.system.mapper.SysStudentScoreMapper">
+
+    <resultMap type="SysStudentScore" id="SysStudentScoreResult">
+        <result property="studentScoreId" column="student_score_id"/>
+        <result property="studentId" column="student_id"/>
+        <result property="semesterId" column="semester_id"/>
+        <result property="chinese" column="chinese"/>
+        <result property="math" column="math"/>
+        <result property="english" column="english"/>
+        <result property="art" column="art"/>
+        <result property="music" column="music"/>
+        <result property="sports" column="sports"/>
+        <result property="practice" column="practice"/>
+        <result property="computer" column="computer"/>
+        <result property="labour" column="labour"/>
+        <result property="morality" column="morality"/>
+        <result property="health" column="health"/>
+        <result property="science" column="science"/>
+        <result property="calligraphy" column="calligraphy"/>
+        <result property="dance" column="dance"/>
+        <result property="readbook" column="readbook"/>
+        <result property="createTime" column="create_time"/>
+        <result property="studentName" column="student_name"/>
+        <result property="deptName" column="dept_name"/>
+    </resultMap>
+
+    <resultMap type="StudentScoreVo" id="StudentScoreVoResult">
+        <result property="subject" column="subject"/>
+        <result property="excellentRate" column="excellentRate"/>
+        <result property="goodRate" column="goodRate"/>
+        <result property="passRate" column="passRate"/>
+        <result property="failRate" column="failRate"/>
+    </resultMap>
+    <sql id="selectSysStudentScoreVo">
+        select sss.student_score_id,
+               sss.student_id,
+               sss.semester_id,
+               sss.chinese,
+               sss.math,
+               sss.english,
+               sss.art,
+               sss.music,
+               sss.sports,
+               sss.practice,
+               sss.computer,
+               sss.labour,
+               sss.morality,
+               sss.health,
+               sss.science,
+               sss.calligraphy,
+               sss.dance,
+               sss.readbook,
+               sss.create_time,
+               ss.student_name,
+               sd.dept_name
+        from sys_student_score sss
+    </sql>
+
+    <select id="selectSysStudentScoreList" parameterType="SysStudentScore" resultMap="SysStudentScoreResult">
+        <include refid="selectSysStudentScoreVo"/>
+        join sys_student ss on ss.student_id = sss.student_id
+        join sys_dept sd on sd.dept_id = ss.dept_id
+        <where>
+            ss.del_flag = '0'
+            <if test="semesterId != null  and semesterId != ''">and sss.semester_id = #{semesterId}</if>
+            <if test="deptId != null  and deptId != ''">and ss.dept_id = #{deptId}</if>
+            <if test="studentId != null  and studentId != ''">and sss.student_id = #{studentId}</if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <select id="selectSysStudentScoreByStudentScoreId" parameterType="Long" resultMap="SysStudentScoreResult">
+        select student_score_id,
+               student_id,
+               semester_id,
+               chinese,
+               math,
+               english,
+               art,
+               music,
+               sports,
+               practice,
+               computer,
+               labour,
+               morality,
+               health,
+               science,
+               calligraphy,
+               dance,
+               readbook,
+               create_time
+        from sys_student_score
+        where student_score_id = #{studentScoreId}
+    </select>
+
+    <insert id="insertSysStudentScore" parameterType="SysStudentScore" useGeneratedKeys="true"
+            keyProperty="studentScoreId">
+        insert into sys_student_score
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="studentId != null">student_id,</if>
+            <if test="semesterId != null">semester_id,</if>
+            <if test="chinese != null">chinese,</if>
+            <if test="math != null">math,</if>
+            <if test="english != null">english,</if>
+            <if test="art != null">art,</if>
+            <if test="music != null">music,</if>
+            <if test="sports != null">sports,</if>
+            <if test="practice != null">practice,</if>
+            <if test="computer != null">computer,</if>
+            <if test="labour != null">labour,</if>
+            <if test="morality != null">morality,</if>
+            <if test="health != null">health,</if>
+            <if test="science != null">science,</if>
+            <if test="calligraphy != null">calligraphy,</if>
+            <if test="dance != null">dance,</if>
+            <if test="readbook != null">readbook,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="studentId != null">#{studentId},</if>
+            <if test="semesterId != null">#{semesterId},</if>
+            <if test="chinese != null">#{chinese},</if>
+            <if test="math != null">#{math},</if>
+            <if test="english != null">#{english},</if>
+            <if test="art != null">#{art},</if>
+            <if test="music != null">#{music},</if>
+            <if test="sports != null">#{sports},</if>
+            <if test="practice != null">#{practice},</if>
+            <if test="computer != null">#{computer},</if>
+            <if test="labour != null">#{labour},</if>
+            <if test="morality != null">#{morality},</if>
+            <if test="health != null">#{health},</if>
+            <if test="science != null">#{science},</if>
+            <if test="calligraphy != null">#{calligraphy},</if>
+            <if test="dance != null">#{dance},</if>
+            <if test="readbook != null">#{readbook},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateSysStudentScore" parameterType="SysStudentScore">
+        update sys_student_score
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="studentId != null">student_id = #{studentId},</if>
+            <if test="semesterId != null">semester_id = #{semesterId},</if>
+            <if test="chinese != null">chinese = #{chinese},</if>
+            <if test="math != null">math = #{math},</if>
+            <if test="english != null">english = #{english},</if>
+            <if test="art != null">art = #{art},</if>
+            <if test="music != null">music = #{music},</if>
+            <if test="sports != null">sports = #{sports},</if>
+            <if test="practice != null">practice = #{practice},</if>
+            <if test="computer != null">computer = #{computer},</if>
+            <if test="labour != null">labour = #{labour},</if>
+            <if test="morality != null">morality = #{morality},</if>
+            <if test="health != null">health = #{health},</if>
+            <if test="science != null">science = #{science},</if>
+            <if test="calligraphy != null">calligraphy = #{calligraphy},</if>
+            <if test="dance != null">dance = #{dance},</if>
+            <if test="readbook != null">readbook = #{readbook},</if>
+        </trim>
+        where student_score_id = #{studentScoreId}
+    </update>
+
+    <delete id="deleteSysStudentScoreByStudentScoreId" parameterType="Long">
+        delete
+        from sys_student_score
+        where student_score_id = #{studentScoreId}
+    </delete>
+
+    <delete id="deleteSysStudentScoreByStudentScoreIds" parameterType="String">
+        delete from sys_student_score where student_score_id in
+        <foreach item="studentScoreId" collection="array" open="(" separator="," close=")">
+            #{studentScoreId}
+        </foreach>
+    </delete>
+
+    <insert id="insertSysStudentScores">
+        insert into sys_student_score(student_id, semester_id, chinese, math, english, art, music, sports, practice,
+        computer, labour, morality, health, science, calligraphy, dance, readbook,create_time) values
+        <foreach item="item" index="index" collection="list" separator=",">
+            (#{item.studentId},#{item.semesterId},#{item.chinese},#{item.math},#{item.english},#{item.art},#{item.music},#{item.sports},#{item.practice},
+            #{item.computer},#{item.labour},#{item.morality},#{item.health},#{item.science},#{item.calligraphy},#{item.dance},#{item.readbook},sysdate())
+        </foreach>
+    </insert>
+    <delete id="deleteBySemesterId">
+        delete
+        from sys_student_score
+        where semester_id = #{semesterId}
+    </delete>
+
+    <select id="selectIndexScore" parameterType="string"
+            resultType="com.z.system.domain.vo.StudentScoreVo">
+        <![CDATA[
+        SELECT 'chinese'                                                                              as subject,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%') AS excellentRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 70 AND chinese < 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS goodRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 60 AND chinese < 70 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS passRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese < 60 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%')  AS failRate
+        FROM sys_student_score
+        where semester_id = #{semesterId}
+        UNION ALL
+        -- math 学科统计
+        SELECT 'math'                                                                                 as subject,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%') AS excellentRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 70 AND chinese < 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS goodRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 60 AND chinese < 70 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS passRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese < 60 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%')  AS failRate
+        FROM sys_student_score
+        where semester_id = #{semesterId}
+        UNION ALL
+        -- english 学科统计
+        SELECT 'english'                                                                              as subject,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%') AS excellentRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 70 AND chinese < 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS goodRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 60 AND chinese < 70 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS passRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese < 60 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%')  AS failRate
+        FROM sys_student_score
+        where semester_id = #{semesterId}
+        UNION ALL
+        -- art 学科统计
+        SELECT 'art'                                                                                  as subject,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%') AS excellentRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 70 AND chinese < 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS goodRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 60 AND chinese < 70 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS passRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese < 60 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%')  AS failRate
+        FROM sys_student_score
+        where semester_id = #{semesterId}
+        UNION ALL
+        -- music 学科统计
+        SELECT 'music'                                                                                as subject,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%') AS excellentRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 70 AND chinese < 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS goodRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 60 AND chinese < 70 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS passRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese < 60 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%')  AS failRate
+        FROM sys_student_score
+        where semester_id = #{semesterId}
+        UNION ALL
+        -- sports 学科统计
+        SELECT 'sports'                                                                               as subject,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%') AS excellentRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 70 AND chinese < 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS goodRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 60 AND chinese < 70 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS passRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese < 60 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%')  AS failRate
+        FROM sys_student_score
+        where semester_id = #{semesterId}
+        UNION ALL
+        -- practice 学科统计
+        SELECT 'practice'                                                                             as subject,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%') AS excellentRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 70 AND chinese < 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS goodRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 60 AND chinese < 70 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS passRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese < 60 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%')  AS failRate
+        FROM sys_student_score
+        where semester_id = #{semesterId}
+        UNION ALL
+        -- computer 学科统计
+        SELECT 'computer'                                                                             as subject,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%') AS excellentRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 70 AND chinese < 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS goodRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 60 AND chinese < 70 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS passRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese < 60 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%')  AS failRate
+        FROM sys_student_score
+        where semester_id = #{semesterId}
+        UNION ALL
+        -- labour 学科统计
+        SELECT 'labour'                                                                               as subject,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%') AS excellentRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 70 AND chinese < 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS goodRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 60 AND chinese < 70 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS passRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese < 60 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%')  AS failRate
+        FROM sys_student_score
+        where semester_id = #{semesterId}
+        UNION ALL
+        -- morality 学科统计
+        SELECT 'morality'                                                                             as subject,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%') AS excellentRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 70 AND chinese < 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS goodRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 60 AND chinese < 70 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS passRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese < 60 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%')  AS failRate
+        FROM sys_student_score
+        where semester_id = #{semesterId}
+        UNION ALL
+        -- health 学科统计
+        SELECT 'health'                                                                               as subject,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%') AS excellentRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 70 AND chinese < 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS goodRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 60 AND chinese < 70 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS passRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese < 60 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%')  AS failRate
+        FROM sys_student_score
+        where semester_id = #{semesterId}
+        UNION ALL
+        -- science 学科统计
+        SELECT 'science'                                                                              as subject,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%') AS excellentRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 70 AND chinese < 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS goodRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 60 AND chinese < 70 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS passRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese < 60 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%')  AS failRate
+        FROM sys_student_score
+        where semester_id = #{semesterId}
+        UNION ALL
+        -- calligraphy 学科统计
+        SELECT 'calligraphy'                                                                          as subject,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%') AS excellentRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 70 AND chinese < 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS goodRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 60 AND chinese < 70 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS passRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese < 60 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%')  AS failRate
+        FROM sys_student_score
+        where semester_id = #{semesterId}
+        UNION ALL
+        -- dance 学科统计
+        SELECT 'dance'                                                                                as subject,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%') AS excellentRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 70 AND chinese < 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS goodRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 60 AND chinese < 70 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS passRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese < 60 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%')  AS failRate
+        FROM sys_student_score
+        where semester_id = #{semesterId}
+        UNION ALL
+        -- readbook 学科统计
+        SELECT 'readbook'                                                                             as subject,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%') AS excellentRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 70 AND chinese < 85 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS goodRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese >= 60 AND chinese < 70 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2),
+                      '%')                                                                            AS passRate,
+               CONCAT(ROUND(SUM(CASE WHEN chinese < 60 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), '%')  AS failRate
+        FROM sys_student_score
+        where semester_id = #{semesterId}
+        ]]>
+
+    </select>
+</mapper>

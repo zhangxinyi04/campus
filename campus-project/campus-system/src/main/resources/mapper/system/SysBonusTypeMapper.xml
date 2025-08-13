@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.z.system.mapper.SysBonusTypeMapper">
+
+    <resultMap type="SysBonusType" id="SysBonusTypeResult">
+        <result property="bonusTypeId" column="bonus_type_id"/>
+        <result property="title" column="title"/>
+        <result property="image" column="image"/>
+        <result property="type" column="type"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="mark" column="mark"/>
+        <result property="userId" column="user_id"/>
+    </resultMap>
+
+    <sql id="selectSysBonusTypeVo">
+        select bonus_type_id, title, image, type, del_flag, mark,user_id
+        from sys_bonus_type
+    </sql>
+
+    <select id="selectSysBonusTypeList" parameterType="SysBonusType" resultMap="SysBonusTypeResult">
+        <include refid="selectSysBonusTypeVo"/>
+        <where>
+            del_flag = '0'
+            <if test="userId != null">and user_id = #{userId}</if>
+            <if test="title != null  and title != ''">and title = #{title}</if>
+            <if test="image != null  and image != ''">and image = #{image}</if>
+            <if test="type != null  and type != ''">and type = #{type}</if>
+            <if test="mark != null  and mark != ''">and mark = #{mark}</if>
+        </where>
+    </select>
+
+    <select id="selectSysBonusTypeByBonusTypeId" parameterType="Long" resultMap="SysBonusTypeResult">
+        <include refid="selectSysBonusTypeVo"/>
+        where bonus_type_id = #{bonusTypeId}
+    </select>
+
+    <insert id="insertSysBonusType" parameterType="SysBonusType" useGeneratedKeys="true" keyProperty="bonusTypeId">
+        insert into sys_bonus_type
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="title != null and title != ''">title,</if>
+            <if test="image != null">image,</if>
+            <if test="type != null and type != ''">type,</if>
+            <if test="delFlag != null and delFlag != ''">del_flag,</if>
+            <if test="mark != null and mark != ''">mark,</if>
+            <if test="userId != null and userId != ''">user_id,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="title != null and title != ''">#{title},</if>
+            <if test="image != null">#{image},</if>
+            <if test="type != null and type != ''">#{type},</if>
+            <if test="delFlag != null and delFlag != ''">#{delFlag},</if>
+            <if test="mark != null and mark != ''">#{mark},</if>
+            <if test="userId != null and userId != ''">#{userId},</if>
+        </trim>
+    </insert>
+
+    <update id="updateSysBonusType" parameterType="SysBonusType">
+        update sys_bonus_type
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="title != null and title != ''">title = #{title},</if>
+            <if test="image != null">image = #{image},</if>
+            <if test="type != null and type != ''">type = #{type},</if>
+            <if test="delFlag != null and delFlag != ''">del_flag = #{delFlag},</if>
+            <if test="mark != null and mark != ''">mark = #{mark},</if>
+        </trim>
+        where bonus_type_id = #{bonusTypeId}
+    </update>
+
+    <delete id="deleteSysBonusTypeByBonusTypeId" parameterType="Long">
+        delete
+        from sys_bonus_type
+        where bonus_type_id = #{bonusTypeId}
+    </delete>
+
+    <update id="deleteSysBonusTypeByBonusTypeIds" parameterType="String">
+        update sys_bonus_type  set del_flag = '1'  where bonus_type_id in
+        <foreach item="bonusTypeId" collection="array" open="(" separator="," close=")">
+            #{bonusTypeId}
+        </foreach>
+    </update>
+
+    <select id="selectScoreDetail" parameterType="SysStudentMarkRecords" resultMap="SysBonusTypeResult">
+        select type,count(mark) as counts from sys_student_mark_records
+        <where>
+            <if test="studentId != null  and studentId != ''">and student_id = #{studentId}</if>
+            <if test="startTime != null and endTime !=null ">and create_time &gt;= #{startTime} and create_time &lt;=
+                #{endTime}
+            </if>
+            <if test="semesterId != null">and semester_id = #{semesterId}</if>
+            <if test="courseId != null">and course_id = #{courseId}</if>
+            <if test="deptId != null">and dept_id = #{deptId}</if>
+        </where>
+        group by type
+    </select>
+
+    <select id="selectBonusDetail" parameterType="SysStudentMarkRecords" >
+        select bonus_id as bonusTypeId,count(mark) as counts from sys_student_mark_records
+        <where>
+            <if test="semesterId != null">and semester_id = #{semesterId}</if>
+            <if test="courseId != null">and course_id = #{courseId}</if>
+            <if test="deptId != null">and dept_id = #{deptId}</if>
+            <if test="studentId != null  and studentId != ''">and student_id = #{studentId}</if>
+            <if test="startTime != null and endTime !=null ">and create_time &gt;= #{startTime} and create_time &lt;=
+                #{endTime}
+            </if>
+        </where>
+        group by bonus_id
+    </select>
+</mapper>

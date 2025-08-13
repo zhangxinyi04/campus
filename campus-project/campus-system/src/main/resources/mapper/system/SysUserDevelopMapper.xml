@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.z.system.mapper.SysUserDevelopMapper">
+
+    <resultMap type="SysUserDevelop" id="SysUserDevelopResult">
+        <result property="developId" column="develop_id"/>
+        <result property="studentId" column="student_id"/>
+        <result property="developIndex" column="develop_index"/>
+        <result property="institutionRank" column="institution_rank"/>
+        <result property="awardGrade" column="award_grade"/>
+        <result property="content" column="content"/>
+        <result property="semesterId" column="semester_id"/>
+        <result property="url" column="url"/>
+        <result property="status" column="status"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="createTime" column="create_time"/>
+        <result property="mark" column="mark"/>
+        <result property="studentName" column="student_name"/>
+        <result property="deptName" column="dept_name"/>
+        <result property="qrCode" column="qr_code"/>
+    </resultMap>
+
+    <sql id="selectSysUserDevelopVo">
+        select sud.develop_id,
+               sud.student_id,
+               sud.develop_index,
+               sud.institution_rank,
+               sud.award_grade,
+               sud.content,
+               sud.url,
+               sud.status,
+               sud.mark,
+               sud.qr_code,
+               sud.del_flag,
+               ss.student_name,
+               sd.dept_name
+        from sys_user_develop sud
+    </sql>
+
+    <select id="selectSysUserDevelopList" parameterType="SysUserDevelop" resultMap="SysUserDevelopResult">
+        <include refid="selectSysUserDevelopVo"/>
+        join sys_student ss on ss.student_id = sud.student_id
+        join sys_dept sd on sd.dept_id = ss.dept_id
+        <where>
+            ss.del_flag = '0'
+            <if test="studentId != null ">and student_id = #{studentId}</if>
+            <if test="developIndex != null  and developIndex != ''">and sud.develop_index = #{developIndex}</if>
+            <if test="institutionRank != null  and institutionRank != ''">and sud.institution_rank =
+                #{institutionRank}
+            </if>
+            <if test="awardGrade != null  and awardGrade != ''">and sud.award_grade = #{awardGrade}</if>
+            <if test="status != null  and status != ''">and sud.status = #{status}</if>
+            <if test="semesterId != null  and semesterId != ''">and sud.semester_id = #{semesterId}</if>
+        </where>
+        order by sud.create_time desc
+    </select>
+
+    <select id="selectSysUserDevelopByDevelopId" parameterType="Long" resultMap="SysUserDevelopResult">
+        select sud.develop_id,
+               sud.student_id,
+               sud.develop_index,
+               sud.institution_rank,
+               sud.award_grade,
+               sud.content,
+               sud.url,
+               sud.status,
+               sud.mark
+        from sys_user_develop sud
+        where develop_id = #{developId}
+          and del_flag = '0'
+    </select>
+
+    <insert id="insertSysUserDevelop" parameterType="SysUserDevelop" useGeneratedKeys="true" keyProperty="developId">
+        insert into sys_user_develop
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="studentId != null">student_id,</if>
+            <if test="developIndex != null and developIndex != ''">develop_index,</if>
+            <if test="institutionRank != null and institutionRank != ''">institution_rank,</if>
+            <if test="awardGrade != null">award_grade,</if>
+            <if test="content != null">content,</if>
+            <if test="url != null">url,</if>
+            <if test="status != null">status,</if>
+            <if test="delFlag != null">del_flag,</if>
+            <if test="semesterId != null">semester_id,</if>
+            <if test="mark != null">mark,</if>
+            <if test="qrCode != null">qr_code,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="studentId != null">#{studentId},</if>
+            <if test="developIndex != null and developIndex != ''">#{developIndex},</if>
+            <if test="institutionRank != null and institutionRank != ''">#{institutionRank},</if>
+            <if test="awardGrade != null">#{awardGrade},</if>
+            <if test="content != null">#{content},</if>
+            <if test="url != null">#{url},</if>
+            <if test="status != null">#{status},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+            <if test="semesterId != null">#{semesterId},</if>
+            <if test="mark != null">#{mark},</if>
+            <if test="qrCode != null">#{qrCode},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateSysUserDevelop" parameterType="SysUserDevelop">
+        update sys_user_develop
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="studentId != null">student_id = #{studentId},</if>
+            <if test="developIndex != null and developIndex != ''">develop_index = #{developIndex},</if>
+            <if test="institutionRank != null and institutionRank != ''">institution_rank = #{institutionRank},</if>
+            <if test="awardGrade != null">award_grade = #{awardGrade},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="url != null">url = #{url},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where develop_id = #{developId}
+    </update>
+
+    <delete id="deleteSysUserDevelopByDevelopId" parameterType="Long">
+        delete
+        from sys_user_develop
+        where develop_id = #{developId}
+    </delete>
+
+    <delete id="deleteSysUserDevelopByDevelopIds" parameterType="String">
+        delete from sys_user_develop where develop_id in
+        <foreach item="developId" collection="array" open="(" separator="," close=")">
+            #{developId}
+        </foreach>
+    </delete>
+
+    <select id="selectSysUserDevelopStatistics" parameterType="SysUserDevelop" resultMap="SysUserDevelopResult">
+        select develop_id,
+        student_id,
+        develop_index,
+        institution_rank,
+        award_grade,
+        content,
+        qr_code,
+        url from sys_user_develop
+        <where>
+            del_flag = '0'
+            <if test="studentId != null ">and student_id = #{studentId}</if>
+            <if test="developIndex != null  and developIndex != ''">and develop_index = #{developIndex}</if>
+            <if test="institutionRank != null  and institutionRank != ''">and institution_rank =
+                #{institutionRank}
+            </if>
+            <if test="awardGrade != null  and awardGrade != ''">and award_grade = #{awardGrade}</if>
+            <if test="status != null  and status != ''">and status = #{status}</if>
+            <if test="semesterId != null  and semesterId != ''">and semester_id = #{semesterId}</if>
+        </where>
+    </select>
+    <select id="selectDevelopsIndex" resultMap="SysUserDevelopResult" parameterType="string">
+        select institution_rank, count(institution_rank)
+        from sys_user_develop
+        where del_flag = '0' and status = '0' and semester_id = #{semesterId} GROUP BY institution_rank
+    </select>
+</mapper>

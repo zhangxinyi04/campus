@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.z.system.mapper.WxStudentMapper">
+
+    <resultMap type="SysStudent" id="SysStudentResult">
+        <result property="studentId" column="student_id"/>
+        <result property="deptId" column="dept_id"/>
+        <result property="studentName" column="student_name"/>
+        <result property="sex" column="sex"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+        <result property="studentNumber" column="student_number"/>
+        <collection property="dept" javaType="SysDept" resultMap="deptResult"/>
+        <collection property="markRecords" javaType="SysStudentMarkRecords" resultMap="markRecordsResult"/>
+
+    </resultMap>
+    <resultMap id="deptResult" type="SysDept">
+        <id property="deptId" column="dept_id"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="deptName" column="dept_name"/>
+        <result property="ancestors" column="ancestors"/>
+        <result property="orderNum" column="order_num"/>
+        <result property="leader" column="leader"/>
+        <result property="status" column="dept_status"/>
+    </resultMap>
+    <resultMap id="markRecordsResult" type="SysStudentMarkRecords">
+        <result property="mark" column="mark"/>
+        <result property="createTime" column="create_time"/>
+        <result property="semesterId" column="semester_id"/>
+        <result property="type" column="type"/>
+        <result property="courseId" column="course_id"/>
+        <result property="deptName" column="dept_name"/>
+    </resultMap>
+
+    <resultMap id="classCircleResult" type="ClassCircleVo">
+        <result property="mark" column="mark"/>
+        <result property="sex" column="sex"/>
+        <result property="createTime" column="create_time"/>
+        <result property="type" column="type"/>
+        <result property="deptName" column="dept_name"/>
+        <result property="studentName" column="student_name"/>
+        <result property="courseName" column="course_name"/>
+        <result property="image" column="image"/>
+        <result property="content" column="content"/>
+    </resultMap>
+
+    <select id="selectStudentByUserId" parameterType="Long" resultMap="SysStudentResult">
+        select s.student_id,
+               s.student_name,
+               s.sex,
+               s.student_number,
+               sd.dept_id,
+               sd.dept_name,
+               sd.ancestors,
+               sd.parent_id
+        from sys_student s
+                 left join sys_student_patriarch ssp on s.student_id = ssp.student_id
+                 left join sys_dept sd on s.dept_id = sd.dept_id
+        where ssp.patriarch_id = #{userId}
+          and s.del_flag = '0'
+    </select>
+
+    <insert id="insertUser" parameterType="SysUser" useGeneratedKeys="true" keyProperty="userId">
+        insert into sys_user(
+        <if test="userId != null and userId != 0">user_id,</if>
+        <if test="deptId != null and deptId != 0">dept_id,</if>
+        <if test="userName != null and userName != ''">user_name,</if>
+        <if test="nickName != null and nickName != ''">nick_name,</if>
+        <if test="email != null and email != ''">email,</if>
+        <if test="avatar != null and avatar != ''">avatar,</if>
+        <if test="phonenumber != null and phonenumber != ''">phonenumber,</if>
+        <if test="sex != null and sex != ''">sex,</if>
+        <if test="password != null and password != ''">password,</if>
+        <if test="status != null and status != ''">status,</if>
+        <if test="createBy != null and createBy != ''">create_by,</if>
+        <if test="remark != null and remark != ''">remark,</if>
+        create_time
+        )values(
+        <if test="userId != null and userId != ''">#{userId},</if>
+        <if test="deptId != null and deptId != ''">#{deptId},</if>
+        <if test="userName != null and userName != ''">#{userName},</if>
+        <if test="nickName != null and nickName != ''">#{nickName},</if>
+        <if test="email != null and email != ''">#{email},</if>
+        <if test="avatar != null and avatar != ''">#{avatar},</if>
+        <if test="phonenumber != null and phonenumber != ''">#{phonenumber},</if>
+        <if test="sex != null and sex != ''">#{sex},</if>
+        <if test="password != null and password != ''">#{password},</if>
+        <if test="status != null and status != ''">#{status},</if>
+        <if test="createBy != null and createBy != ''">#{createBy},</if>
+        <if test="remark != null and remark != ''">#{remark},</if>
+        sysdate()
+        )
+    </insert>
+
+    <update id="updateUser" parameterType="SysUser">
+        update sys_user
+        <set>
+            <if test="deptId != null and deptId != 0">dept_id = #{deptId},</if>
+            <if test="userName != null and userName != ''">user_name = #{userName},</if>
+            <if test="nickName != null and nickName != ''">nick_name = #{nickName},</if>
+            <if test="email != null ">email = #{email},</if>
+            <if test="phonenumber != null ">phonenumber = #{phonenumber},</if>
+            <if test="sex != null and sex != ''">sex = #{sex},</if>
+            <if test="avatar != null and avatar != ''">avatar = #{avatar},</if>
+            <if test="password != null and password != ''">password = #{password},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="loginIp != null and loginIp != ''">login_ip = #{loginIp},</if>
+            <if test="loginDate != null">login_date = #{loginDate},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </set>
+        where user_id = #{userId}
+    </update>
+
+    <insert id="clockIn" parameterType="SysEventCycleStudent">
+        insert into sys_event_cycle_student (event_cycle_id, images, description, student_id, create_time)
+        values (#{eventCycleId}, #{images}, #{description}, #{studentId}, #{createTime})
+    </insert>
+
+    <select id="selectMarkByStudentId" resultType="Long">
+        select mark
+        from sys_student_mark
+        where student_id = #{studentId}
+          and semester_id = #{semesterId}
+    </select>
+
+    <select id="classCircle" parameterType="SysStudentMarkRecords" resultMap="classCircleResult">
+        select ss.student_name,ss.sex,sc.course_name,ssmr.mark,ssmr.create_time,ssmr.type,sd.dept_name,ssmr.content,ssmr.image
+        from sys_student_mark_records ssmr
+                 left join sys_student ss  on ss.student_id = ssmr.student_id
+                 left join sys_course sc on sc.course_id = ssmr.course_id
+                 left join sys_dept sd on sd.dept_id = ssmr.dept_id
+        where ssmr.dept_id = #{deptId} and ssmr.semester_id = #{semesterId}
+        order by ssmr.create_time desc
+    </select>
+</mapper>

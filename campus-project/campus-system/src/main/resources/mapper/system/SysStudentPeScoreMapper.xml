@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.z.system.mapper.SysStudentPeScoreMapper">
+
+    <resultMap type="SysStudentPeScore" id="SysStudentPeScoreResult">
+        <result property="studentScoreId" column="student_score_id"/>
+        <result property="studentId" column="student_id"/>
+        <result property="studentName" column="student_name"/>
+        <result property="semesterId" column="semester_id"/>
+        <result property="score" column="score"/>
+        <result property="level" column="level"/>
+        <result property="testScore" column="test_score"/>
+        <result property="testLevel" column="test_level"/>
+        <result property="appendScore" column="append_score"/>
+        <result property="height" column="height"/>
+        <result property="weight" column="weight"/>
+        <result property="vitalCapacity" column="vital_capacity"/>
+        <result property="bmi" column="bmi"/>
+        <result property="run" column="run"/>
+        <result property="sitReach" column="sit_reach"/>
+        <result property="jump" column="jump"/>
+        <result property="sitUp" column="sit_up"/>
+        <result property="createTime" column="create_time"/>
+        <result property="count" column="count"/>
+    </resultMap>
+
+    <sql id="selectSysStudentPeScoreVo">
+        select ssps.student_score_id,
+               ssps.student_id,
+               ssps.semester_id,
+               ssps.score,
+               ssps.level,
+               ssps.test_score,
+               ssps.test_level,
+               ssps.append_score,
+               ssps.height,
+               ssps.weight,
+               ssps.vital_capacity,
+               ssps.bmi,
+               ssps.run,
+               ssps.sit_reach,
+               ssps.jump,
+               ssps.sit_up,
+               ssps.create_time,
+               ss.student_name,
+               sd.dept_name
+        from sys_student_pe_score ssps
+    </sql>
+
+    <select id="selectSysStudentPeScoreList" parameterType="SysStudentPeScore" resultMap="SysStudentPeScoreResult">
+        <include refid="selectSysStudentPeScoreVo"/>
+        join sys_student ss on ss.student_id = ssps.student_id
+        join sys_dept sd on sd.dept_id = ss.dept_id
+        <where>
+            ss.del_flag = '0'
+            <if test="semesterId != null  and semesterId != ''">and ssps.semester_id = #{semesterId}</if>
+            <if test="deptId != null  and deptId != ''">and ss.dept_id = #{deptId}</if>
+            <if test="studentId != null  and studentId != ''">and ssps.student_id = #{studentId}</if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <select id="selectSysStudentPeScoreByStudentScoreId" parameterType="Long" resultMap="SysStudentPeScoreResult">
+        select student_score_id
+                   student_id,
+               semester_id,
+               score,
+               level,
+               test_score,
+               test_level,
+               append_score,
+               height,
+               weight,
+               vital_capacity,
+               bmi,
+               run,
+               sit_reach,
+               jump,
+               sit_up,
+               create_time
+        from sys_student_pe_score
+        where student_score_id = #{studentScoreId}
+    </select>
+
+    <insert id="insertSysStudentPeScore" parameterType="SysStudentPeScore" useGeneratedKeys="true"
+            keyProperty="studentScoreId">
+        insert into sys_student_pe_score
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="studentId != null">student_id,</if>
+            <if test="semesterId != null">semester_id,</if>
+            <if test="score != null">score,</if>
+            <if test="level != null">level,</if>
+            <if test="testScore != null">test_score,</if>
+            <if test="testLevel != null">test_level,</if>
+            <if test="appendScore != null">append_score,</if>
+            <if test="height != null">height,</if>
+            <if test="weight != null">weight,</if>
+            <if test="vitalCapacity != null">vital_capacity,</if>
+            <if test="bmi != null">bmi,</if>
+            <if test="run != null">run,</if>
+            <if test="sitReach != null">sit_reach,</if>
+            <if test="jump != null">jump,</if>
+            <if test="sitUp != null">sit_up,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="studentId != null">#{studentId},</if>
+            <if test="semesterId != null">#{semesterId},</if>
+            <if test="score != null">#{score},</if>
+            <if test="level != null">#{level},</if>
+            <if test="testScore != null">#{testScore},</if>
+            <if test="testLevel != null">#{testLevel},</if>
+            <if test="appendScore != null">#{appendScore},</if>
+            <if test="height != null">#{height},</if>
+            <if test="weight != null">#{weight},</if>
+            <if test="vitalCapacity != null">#{vitalCapacity},</if>
+            <if test="bmi != null">#{bmi},</if>
+            <if test="run != null">#{run},</if>
+            <if test="sitReach != null">#{sitReach},</if>
+            <if test="jump != null">#{jump},</if>
+            <if test="sitUp != null">#{sitUp},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateSysStudentPeScore" parameterType="SysStudentPeScore">
+        update sys_student_pe_score
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="studentId != null">student_id = #{studentId},</if>
+            <if test="semesterId != null">semester_id = #{semesterId},</if>
+            <if test="score != null">score = #{score},</if>
+            <if test="level != null">level = #{level},</if>
+            <if test="testScore != null">test_score = #{testScore},</if>
+            <if test="testLevel != null">test_level = #{testLevel},</if>
+            <if test="appendScore != null">append_score = #{appendScore},</if>
+            <if test="height != null">height = #{height},</if>
+            <if test="weight != null">weight = #{weight},</if>
+            <if test="vitalCapacity != null">vital_capacity = #{vitalCapacity},</if>
+            <if test="bmi != null">bmi = #{bmi},</if>
+            <if test="run != null">run = #{run},</if>
+            <if test="sitReach != null">sit_reach = #{sitReach},</if>
+            <if test="jump != null">jump = #{jump},</if>
+            <if test="sitUp != null">sit_up = #{sitUp},</if>
+        </trim>
+        where student_score_id = #{studentScoreId}
+    </update>
+
+    <delete id="deleteSysStudentPeScoreByStudentScoreId" parameterType="Long">
+        delete
+        from sys_student_pe_score
+        where student_score_id = #{studentScoreId}
+    </delete>
+
+    <delete id="deleteSysStudentPeScoreByStudentScoreIds" parameterType="String">
+        delete from sys_student_pe_score where student_score_id in
+        <foreach item="studentScoreId" collection="array" open="(" separator="," close=")">
+            #{studentScoreId}
+        </foreach>
+    </delete>
+
+    <insert id="insertSysStudentPeScores">
+        insert into sys_student_pe_score( student_id,
+        semester_id,
+        score,
+        level,
+        test_score,
+        test_level,
+        append_score,
+        height,
+        weight,
+        vital_capacity,
+        bmi,
+        run,
+        sit_reach,
+        jump,
+        sit_up,
+        create_time) values
+        <foreach item="item" index="index" collection="list" separator=",">
+            (#{item.studentId},#{item.semesterId},#{item.score},#{item.level},#{item.testScore},#{item.testLevel},#{item.appendScore},
+            #{item.height},#{item.weight},#{item.vitalCapacity},#{item.bmi},#{item.run},#{item.sitReach},#{item.jump},#{item.sitUp},sysdate())
+        </foreach>
+    </insert>
+    <delete id="deleteBySemesterId">
+        delete
+        from sys_student_pe_score
+        where semester_id = #{semesterId}
+    </delete>
+
+    <select id="selectIndexScorePe" parameterType="string" resultMap="SysStudentPeScoreResult">
+        select level,count(level) as `count` from  sys_student_pe_score where semester_id = #{semesterId} group by level
+    </select>
+
+</mapper>

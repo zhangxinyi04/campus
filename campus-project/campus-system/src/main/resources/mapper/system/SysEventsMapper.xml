@@ -1,0 +1,372 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.z.system.mapper.SysEventsMapper">
+
+    <resultMap type="SysEvents" id="SysEventsResult">
+        <result property="eventId" column="event_id"/>
+        <result property="semesterId" column="semester_id"/>
+        <result property="mark" column="mark"/>
+        <result property="eventName" column="event_name"/>
+        <result property="eventIntro" column="event_intro"/>
+        <result property="precautions" column="precautions"/>
+        <result property="eventPic" column="event_pic"/>
+        <result property="attachments" column="attachments"/>
+        <result property="startTime" column="start_time"/>
+        <result property="endTime" column="end_time"/>
+        <result property="rank" column="rank_type"/>
+        <result property="eventType" column="event_type"/>
+        <result property="eventTag" column="event_tag"/>
+        <result property="eventCategory" column="event_category"/>
+        <result property="eventCycle" column="event_cycle"/>
+        <result property="records" column="records"/>
+        <result property="visible" column="visible"/>
+        <result property="createTime" column="create_time"/>
+        <result property="status" column="status"/>
+        <result property="eventTagType" column="event_tag_type"/>
+        <association property="eventMedal" javaType="SysEventMedal" resultMap="eventMedalResult"/>
+        <association property="eventGradeClass" javaType="java.util.List" resultMap="eventGradeClassResult"/>
+        <association property="depts" javaType="java.util.List" resultMap="deptResult"/>
+    </resultMap>
+    <resultMap id="eventMedalResult" type="SysEventMedal">
+        <id property="eventMedalId" column="event_medal_id"/>
+        <result property="eventMedalName" column="event_medal_name"/>
+        <result property="url" column="url"/>
+    </resultMap>
+    <resultMap id="eventGradeClassResult" type="SysEventGradeClass">
+        <result property="gradeId" column="grade_id"/>
+        <result property="classId" column="class_id"/>
+    </resultMap>
+    <resultMap id="deptResult" type="SysDept">
+        <id property="deptId" column="dept_id"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="deptName" column="dept_name"/>
+        <result property="ancestors" column="ancestors"/>
+        <result property="orderNum" column="order_num"/>
+        <result property="leader" column="leader"/>
+        <result property="status" column="dept_status"/>
+    </resultMap>
+
+
+    <resultMap id="sysEventsTemplateResult" type="SysEventsTemplate">
+        <id property="eventTemplateId" column="event_template_id"/>
+        <result property="title" column="title"/>
+        <result property="image" column="url"/>
+        <result property="tags" column="tags"/>
+        <result property="intro" column="intro"/>
+    </resultMap>
+
+    <resultMap id="sysEventCycleResult" type="SysEventCycle">
+        <id property="eventCycleId" column="event_cycle_id"/>
+        <result property="eventId" column="event_id"/>
+        <result property="startTime" column="start_time"/>
+        <result property="endTime" column="end_time"/>
+        <result property="eventCycle" column="event_cycle"/>
+        <association property="cycleStudent" javaType="SysEventCycleStudent" resultMap="sysEventCycleStudentResult"/>
+
+    </resultMap>
+    <resultMap id="sysEventCycleStudentResult" type="SysEventCycleStudent">
+        <id property="eventCycleStudentId" column="event_cycle_student_id"/>
+        <result property="eventCycleId" column="event_cycle_id"/>
+        <result property="images" column="images"/>
+        <result property="createTime" column="create_time"/>
+        <result property="description" column="description"/>
+        <result property="studentId" column="student_id"/>
+    </resultMap>
+    <sql id="selectSysEventsVo">
+        select DISTINCT e.event_id,
+                        e.semester_id,
+                        e.mark,
+                        e.event_name,
+                        e.event_intro,
+                        e.precautions,
+                        e.event_pic,
+                        e.attachments,
+                        e.start_time,
+                        e.end_time,
+                        e.rank_type,
+                        e.event_type,
+                        e.event_tag,
+                        e.event_category,
+                        e.event_cycle,
+                        e.records,
+                        e.visible,
+                        e.create_time,
+                        e.status,
+                        em.event_medal_name,
+                        em.url
+        from sys_events e
+    </sql>
+
+    <select id="selectSysEventsList" parameterType="SysEvents" resultMap="SysEventsResult">
+        <include refid="selectSysEventsVo"/>
+        left join sys_event_medal em on em.event_medal_id = e.medal_id
+        <if test="gradeIds != null or classIds != null ">left JOIN sys_event_grade seg on seg.event_id = e.event_id</if>
+
+        <where>
+            e.del_flag = '0'
+            <if test="gradeIds != null ">
+                and seg.grade_id in
+                <foreach collection="gradeIds" item="gradeId" open="(" separator="," close=")">
+                    #{gradeId}
+                </foreach>
+            </if>
+            <if test="classIds != null ">
+                and seg.class_id in
+                <foreach collection="classIds" item="classId" open="(" separator="," close=")">
+                    #{classId}
+                </foreach>
+            </if>
+
+            <if test="semesterId != null ">and e.semester_id = #{semesterId}</if>
+            <if test="mark != null ">and e.mark = #{mark}</if>
+            <if test="eventName != null  and eventName != ''">and e.event_name like concat('%', #{eventName}, '%')</if>
+            <if test="eventIntro != null  and eventIntro != ''">and e.event_intro = #{eventIntro}</if>
+            <if test="precautions != null  and precautions != ''">and e.precautions = #{precautions}</if>
+            <if test="attachments != null  and attachments != ''">and e.attachments = #{attachments}</if>
+            <if test="startTime != null ">and e.start_time = #{startTime}</if>
+            <if test="endTime != null ">and e.end_time = #{endTime}</if>
+            <if test="rank != null  and rank != ''">and e.rank_type = #{rank}</if>
+            <if test="eventType != null ">and e.event_type = #{eventType}</if>
+            <if test="eventTag != null  and eventTag != ''">and e.event_tag = #{eventTag}</if>
+            <if test="eventCategory != null  and eventCategory != ''">and e.event_category = #{eventCategory}</if>
+            <if test="eventCycle != null  and eventCycle != ''">and e.event_cycle = #{eventCycle}</if>
+            <if test="records != null  and records != ''">and e.records = #{records}</if>
+            <if test="visible != null  and visible != ''">and e.visible = #{visible}</if>
+            <if test="status != null  and status != ''">and e.status = #{status}</if>
+            <if test="statusArray != null">and status in
+                <foreach collection="statusArray" item="status" open="(" separator="," close=")">
+                    #{status}
+                </foreach>
+            </if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <select id="selectSysEventsByEventId" parameterType="Long" resultMap="SysEventsResult">
+        select e.event_id,
+               e.semester_id,
+               e.mark,
+               e.event_name,
+               e.event_intro,
+               e.precautions,
+               e.event_pic,
+               e.attachments,
+               e.start_time,
+               e.end_time,
+               e.rank_type,
+               e.event_type,
+               e.event_tag,
+               e.event_category,
+               e.event_cycle,
+               e.records,
+               e.visible,
+               e.create_time,
+               e.status,
+               e.event_tag_type,
+               em.event_medal_name,
+               em.url,
+               sd.dept_name,
+               seg.class_id,
+               seg.grade_id,
+               sd.dept_id
+        from sys_events e
+                 left join sys_event_medal em on em.event_medal_id = e.medal_id
+                 left join sys_event_grade seg on seg.event_id = e.event_id
+                 left join sys_dept sd on seg.grade_id = sd.dept_id
+        where e.event_id = #{eventId}
+
+    </select>
+
+    <insert id="insertSysEvents" parameterType="SysEvents" useGeneratedKeys="true" keyProperty="eventId">
+        insert into sys_events
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="semesterId != null">semester_id,</if>
+            <if test="mark != null">mark,</if>
+            <if test="eventName != null and eventName != ''">event_name,</if>
+            <if test="eventIntro != null and eventIntro != ''">event_intro,</if>
+            <if test="precautions != null">precautions,</if>
+            <if test="eventPic != null and eventPic != ''">event_pic,</if>
+            <if test="attachments != null">attachments,</if>
+            <if test="startTime != null">start_time,</if>
+            <if test="endTime != null">end_time,</if>
+            <if test="rank != null and rank != ''">rank_type,</if>
+            <if test="eventType != null">event_type,</if>
+            <if test="eventTag != null">event_tag,</if>
+            <if test="eventCategory != null">event_category,</if>
+            <if test="eventCycle != null">event_cycle,</if>
+            <if test="records != null">records,</if>
+            <if test="visible != null">visible,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="medalId != null and medalId != ''">medal_id,</if>
+            <if test="eventTagType != null and eventTagType != ''">event_tag_type,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="semesterId != null">#{semesterId},</if>
+            <if test="mark != null">#{mark},</if>
+            <if test="eventName != null and eventName != ''">#{eventName},</if>
+            <if test="eventIntro != null and eventIntro != ''">#{eventIntro},</if>
+            <if test="precautions != null">#{precautions},</if>
+            <if test="eventPic != null and eventPic != ''">#{eventPic},</if>
+            <if test="attachments != null">#{attachments},</if>
+            <if test="startTime != null">#{startTime},</if>
+            <if test="endTime != null">#{endTime},</if>
+            <if test="rank != null and rank != ''">#{rank},</if>
+            <if test="eventType != null">#{eventType},</if>
+            <if test="eventTag != null">#{eventTag},</if>
+            <if test="eventCategory != null">#{eventCategory},</if>
+            <if test="eventCycle != null">#{eventCycle},</if>
+            <if test="records != null">#{records},</if>
+            <if test="visible != null">#{visible},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="medalId != null and medalId != ''">#{medalId},</if>
+            <if test="eventTagType != null and eventTagType != ''">#{eventTagType},</if>
+        </trim>
+    </insert>
+
+    <update id="updateSysEvents" parameterType="SysEvents">
+        update sys_events
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="semesterId != null">semester_id = #{semesterId},</if>
+            <if test="mark != null">mark = #{mark},</if>
+            <if test="eventName != null and eventName != ''">event_name = #{eventName},</if>
+            <if test="eventIntro != null and eventIntro != ''">event_intro = #{eventIntro},</if>
+            <if test="precautions != null">precautions = #{precautions},</if>
+            <if test="eventPic != null and eventPic != ''">event_pic = #{eventPic},</if>
+            <if test="attachments != null">attachments = #{attachments},</if>
+            <if test="startTime != null">start_time = #{startTime},</if>
+            <if test="endTime != null">end_time = #{endTime},</if>
+            <if test="rank != null and rank != ''">rank_type = #{rank},</if>
+            <if test="eventType != null">event_type = #{eventType},</if>
+            <if test="eventTag != null">event_tag = #{eventTag},</if>
+            <if test="eventCategory != null">event_category = #{eventCategory},</if>
+            <if test="eventCycle != null">event_cycle = #{eventCycle},</if>
+            <if test="records != null">records = #{records},</if>
+            <if test="visible != null">visible = #{visible},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="eventTagType != null">event_tag_type = #{eventTagType},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+        </trim>
+        where event_id = #{eventId}
+    </update>
+
+    <update id="deleteSysEventsByEventId" parameterType="Long">
+        update sys_events
+        set del_flag = 1
+        where event_id = #{eventId}
+    </update>
+
+    <update id="deleteSysEventsByEventIds" parameterType="String">
+        update sys_events set del_flag = 1 where event_id in
+        <foreach item="eventId" collection="array" open="(" separator="," close=")">
+            #{eventId}
+        </foreach>
+    </update>
+    <update id="updateSysEventsCycle">
+        <foreach collection="list" item="item" separator=";">
+            update sys_event_cycle set status = #{item.status} where event_cycle_id = #{item.eventCycleId}
+        </foreach>
+    </update>
+    <insert id="insertSysEventCycle">
+        insert into sys_event_cycle(event_id, start_time,end_time,event_cycle) values
+        <foreach item="item" index="index" collection="list" separator=",">
+            (#{item.eventId},#{item.startTime},#{item.endTime},#{item.eventCycle})
+        </foreach>
+    </insert>
+    <insert id="insertSysEventGrade">
+        insert into sys_event_grade(event_id, grade_id,class_id) values
+        <foreach item="item" index="index" collection="list" separator=",">
+            (#{item.eventId},#{item.gradeId},#{item.classId})
+        </foreach>
+    </insert>
+
+    <insert id="addTemplate">
+        insert into sys_events_template(event_template_id,title, url,tags,intro) values
+        <foreach item="item" index="index" collection="list" separator=",">
+            (#{item.eventTemplateId},#{item.title},#{item.image},#{item.tags},#{item.intro})
+        </foreach>
+    </insert>
+
+    <select id="listTemplate" parameterType="SysEventsTemplate" resultMap="sysEventsTemplateResult">
+        select event_template_id, title, url, tags, intro
+        from sys_events_template
+    </select>
+
+    <delete id="deleteCycleByEventIds" parameterType="String">
+        delete from sys_event_cycle where event_id in
+        <foreach item="eventId" collection="array" open="(" separator="," close=")">
+            #{eventId}
+        </foreach>
+    </delete>
+    <delete id="deleteMedalByEventIds" parameterType="String">
+        delete from sys_event_medal where event_id in
+        <foreach item="eventId" collection="array" open="(" separator="," close=")">
+            #{eventId}
+        </foreach>
+    </delete>
+    <delete id="deleteGradeByEventIds" parameterType="String">
+        delete from sys_event_grade where event_id in
+        <foreach item="eventId" collection="array" open="(" separator="," close=")">
+            #{eventId}
+        </foreach>
+    </delete>
+    <select id="cycleRecords" parameterType="SysEventCycle" resultMap="sysEventCycleResult">
+        select event_cycle_id, event_id, start_time, end_time, event_cycle,status
+        from sys_event_cycle
+        <where>
+            <if test="eventId != null">and event_id = #{eventId}</if>
+            <if test="eventCycle != null">and event_cycle = #{eventCycle}</if>
+            <if test="status != null">and status = #{status}</if>
+            <if test="statusArray != null">and status in
+                <foreach collection="statusArray" item="status" open="(" separator="," close=")">
+                    #{status}
+                </foreach>
+            </if>
+        </where>
+    </select>
+    <select id="cycleRecordsByStudent" parameterType="SysEventCycleStudent" resultMap="sysEventCycleStudentResult">
+        select event_cycle_student_id, event_cycle_id, create_time, images, description, student_id
+        from sys_event_cycle_student
+        where event_cycle_id = #{eventCycleId}
+    </select>
+
+    <update id="updateSysEventsStatus">
+        <foreach collection="list" item="item" separator=";">
+            update sys_events set status = #{item.status} where event_id = #{item.eventId}
+        </foreach>
+    </update>
+
+
+    <select id="selectEventsCycle" parameterType="SysEvents" resultMap="sysEventCycleResult">
+        select sec.event_cycle_id
+        from sys_event_cycle sec
+        where event_id = #{eventId}
+    </select>
+
+    <select id="selectStudentEventsCycle" resultType="long">
+        select secs.event_cycle_student_id
+        from sys_event_cycle_student secs
+                 join sys_event_cycle sec on sec.event_cycle_id = secs.event_cycle_id
+        where secs.student_id = #{studentId}
+          and sec.event_id = #{eventId}
+    </select>
+
+    <select id="selectCountByEventTagType" parameterType="SysEvents" resultMap="SysEventsResult">
+        select event_id,
+               event_name,
+               event_type,
+               create_time
+        from sys_events
+        where semester_id = #{semesterId}
+          and event_tag_type = #{eventTagType}
+    </select>
+    <select id="selectEventIndex" parameterType="string" resultMap="SysEventsResult">
+        select event_type, COUNT(event_type)
+        from sys_events
+        where semester_id = #{semesterId}
+        GROUP BY event_type
+    </select>
+</mapper>

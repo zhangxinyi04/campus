@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.z.system.mapper.SysCourseMapper">
+
+    <resultMap type="SysCourse" id="SysCourseResult">
+        <result property="courseId" column="course_id"/>
+        <result property="courseCode" column="course_code"/>
+        <result property="courseName" column="course_name"/>
+        <result property="orderNum" column="order_num"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="gradeId" column="grade_id"/>
+        <collection property="depts" javaType="java.util.List" resultMap="deptResult"/>
+    </resultMap>
+
+    <resultMap id="deptResult" type="SysDept">
+        <id property="deptId" column="dept_id"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="deptName" column="dept_name"/>
+        <result property="ancestors" column="ancestors"/>
+        <result property="orderNum" column="order_num"/>
+        <result property="leader" column="leader"/>
+        <result property="status" column="dept_status"/>
+    </resultMap>
+    <sql id="selectSysCourseVo">
+        select course_id,
+               course_code,
+               course_name,
+               order_num,
+               create_by,
+               create_time,
+               update_by,
+               update_time,
+               grade_id
+        from sys_course
+    </sql>
+
+    <select id="selectSysCourseList" parameterType="SysCourse" resultMap="SysCourseResult">
+        <include refid="selectSysCourseVo"/>
+        <where>
+            del_flag = '0'
+            <if test="courseCode != null  and courseCode != ''">and course_code = #{courseCode}</if>
+            <if test="courseName != null  and courseName != ''">and course_name like concat('%', #{courseName}, '%')
+            </if>
+            <if test="orderNum != null ">and order_num = #{orderNum}</if>
+            <if test="gradeId != null  and gradeId != ''">and grade_id = #{gradeId}</if>
+        </where>
+        order by order_num
+
+    </select>
+
+    <select id="selectSysCourseByCourseId" parameterType="Long" resultMap="SysCourseResult">
+        <include refid="selectSysCourseVo"/>
+        where course_id = #{courseId}
+    </select>
+
+    <insert id="insertSysCourse" parameterType="SysCourse" useGeneratedKeys="true" keyProperty="courseId">
+        insert into sys_course
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="courseCode != null">course_code,</if>
+            <if test="courseName != null">course_name,</if>
+            <if test="orderNum != null">order_num,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="gradeId != null">grade_id,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="courseCode != null">#{courseCode},</if>
+            <if test="courseName != null">#{courseName},</if>
+            <if test="orderNum != null">#{orderNum},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="gradeId != null">#{gradeId},</if>
+        </trim>
+    </insert>
+
+    <update id="updateSysCourse" parameterType="SysCourse">
+        update sys_course
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="courseCode != null">course_code = #{courseCode},</if>
+            <if test="courseName != null">course_name = #{courseName},</if>
+            <if test="orderNum != null">order_num = #{orderNum},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="gradeId != null">grade_id = #{gradeId},</if>
+        </trim>
+        where course_id = #{courseId}
+    </update>
+
+    <delete id="deleteSysCourseByCourseId" parameterType="Long">
+        delete
+        from sys_course
+        where course_id = #{courseId}
+    </delete>
+
+    <delete id="deleteSysCourseByCourseIds" parameterType="String">
+        delete from sys_course where course_id in
+        <foreach item="courseId" collection="array" open="(" separator="," close=")">
+            #{courseId}
+        </foreach>
+    </delete>
+
+    <select id="selectCourseByUserId" parameterType="Long" resultMap="SysCourseResult">
+        select
+        sc.course_name,
+        sc.course_id,
+        sd.dept_id,
+        sd.dept_name,
+        sd.ancestors,
+        sd.parent_id
+        from sys_user_course suc
+
+        left join sys_course sc on sc.course_id = suc.course_id
+        left join sys_user_course_class succ on succ.user_course_id = suc.user_course_id
+        left join sys_dept sd on succ.class_id = sd.dept_id
+        <where>
+            sc.del_flag = '0'
+            <if test="userId != null  and userId != ''">and suc.user_id = #{userId}</if>
+        </where>
+    </select>
+    <select id="selectCourseCountIndex" resultType="integer">
+        select count(course_id)
+        from sys_course
+        where del_flag = '0'
+    </select>
+    <!--    <select id="selectCoursesByUserId" parameterType="Long" resultMap="SysCourseResult">-->
+    <!--        select c.course_name from sys_user_course uc-->
+    <!--                left join sys_course c on uc.course_id = c.course_id-->
+    <!--                 where uc.user_id = #{userId}-->
+    <!--    </select>-->
+</mapper>

@@ -1,0 +1,233 @@
+package com.z.system.service.impl;
+
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
+import com.z.common.core.domain.entity.SysSemesterManage;
+import com.z.common.exception.ServiceException;
+import com.z.common.utils.DateUtils;
+import com.z.common.utils.LocalDateTimeComparisonUtil;
+import com.z.system.domain.*;
+import com.z.system.mapper.SysSemesterManageMapper;
+import com.z.system.service.ISysSemesterService;
+import com.z.system.util.PunchDateCalculator;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import com.z.system.mapper.SysEventsMapper;
+import com.z.system.service.ISysEventsService;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * 活动Service业务层处理
+ *
+ * @author z
+ * @date 2025-03-13
+ */
+@Service
+public class SysEventsServiceImpl implements ISysEventsService {
+    @Autowired
+    private SysEventsMapper sysEventsMapper;
+    @Autowired
+    private SysSemesterManageMapper semesterManageMapper;
+
+    /**
+     * 查询活动
+     *
+     * @param eventId 活动主键
+     * @return 活动
+     */
+    @Override
+    public SysEvents selectSysEventsByEventId(Long eventId) {
+        return sysEventsMapper.selectSysEventsByEventId(eventId);
+    }
+
+    /**
+     * 查询活动列表
+     *
+     * @param sysEvents 活动
+     * @return 活动
+     */
+    @Override
+    public List<SysEvents> selectSysEventsList(SysEvents sysEvents) {
+        return sysEventsMapper.selectSysEventsList(sysEvents);
+    }
+
+    /**
+     * 新增活动
+     *
+     * @param sysEvents 活动
+     * @return 结果
+     */
+    @Override
+    @Transactional
+    public void insertSysEvents(SysEvents sysEvents) {
+        //判断当前时间是否在活动开始时间之后
+        LocalDateTime startTime = sysEvents.getStartTime();
+        LocalDateTime endTime = sysEvents.getEndTime();
+        LocalDateTime now = LocalDateTime.now();
+        if (LocalDateTimeComparisonUtil.isBefore(now, endTime) && LocalDateTimeComparisonUtil.isAfter(now, startTime)){
+            sysEvents.setStatus("1");
+        }
+
+        //获取学期Id
+        SysSemesterManage sysSemester = new SysSemesterManage();
+        sysSemester.setStatus("1");
+        SysSemesterManage sysSemesterManage = semesterManageMapper.selectSemesterByConditions(sysSemester);
+        if (sysSemesterManage == null) {
+            throw new ServiceException("未查询到学期信息，请联系管理员");
+        }
+        sysEvents.setSemesterId(sysSemesterManage.getSemesterId());
+        sysEvents.setCreateTime(DateUtils.getNowDate());
+        sysEventsMapper.insertSysEvents(sysEvents);
+
+        //判断event_category 打卡类别是打卡类还是记录类
+        //如果是打卡类需要将所有日期插入sys_event_cycle表
+        String eventCategory = sysEvents.getEventCategory();
+        List<SysEventCycle> sysEventCycles = new ArrayList<>();
+        Long eventId = sysEvents.getEventId();
+
+        if (SysEvents.CLOCK_IN.equals(eventCategory)) {
+
+            PunchDateCalculator.Frequency frequency = null;
+            if (SysEvents.DAY.equals(sysEvents.getEventCycle())) {
+                // 天/次
+                frequency = PunchDateCalculator.Frequency.DAILY;
+            } else if (SysEvents.WEEK.equals(sysEvents.getEventCycle())) {
+                //周次
+                frequency = PunchDateCalculator.Frequency.WEEKLY;
+            } else if (SysEvents.MONTH.equals(sysEvents.getEventCycle())) {
+                //月次
+                frequency = PunchDateCalculator.Frequency.MONTHLY;
+            }
+
+            sysEventCycles = PunchDateCalculator.calculatePunchDates(startTime, endTime, frequency);
+            for (SysEventCycle sysEventCycle : sysEventCycles) {
+                sysEventCycle.setEventId(eventId);
+            }
+
+        } else {
+            SysEventCycle eventCycle = new SysEventCycle();
+            eventCycle.setEventId(eventId);
+            eventCycle.setStartTime(startTime);
+            eventCycle.setEndTime(endTime);
+            sysEventCycles.add(eventCycle);
+        }
+        sysEventsMapper.insertSysEventCycle(sysEventCycles);
+
+        List<SysEventGradeClass> sysEventGradeClasses = new ArrayList<>();
+        if (SysEvents.UNIVERSITY.equals(sysEvents.getRank())) {
+            Long[] gradeIds = sysEvents.getGradeIds();
+            for (Long gradeId : gradeIds) {
+                SysEventGradeClass sysEventGradeClass = new SysEventGradeClass();
+                sysEventGradeClass.setEventId(eventId);
+                sysEventGradeClass.setGradeId(gradeId);
+                sysEventGradeClasses.add(sysEventGradeClass);
+            }
+
+        } else {
+            Long[] classIds = sysEvents.getClassIds();
+            for (Long classId : classIds) {
+                SysEventGradeClass sysEventGradeClass = new SysEventGradeClass();
+                sysEventGradeClass.setEventId(eventId);
+                sysEventGradeClass.setClassId(classId);
+                sysEventGradeClasses.add(sysEventGradeClass);
+            }
+        }
+
+
+        sysEventsMapper.insertSysEventGrade(sysEventGradeClasses);
+    }
+
+    /**
+     * 修改活动
+     *
+     * @param sysEvents 活动
+     * @return 结果
+     */
+    @Override
+    public int updateSysEvents(SysEvents sysEvents) {
+        return sysEventsMapper.updateSysEvents(sysEvents);
+    }
+
+    /**
+     * 批量删除活动
+     *
+     * @param eventIds 需要删除的活动主键
+     * @return 结果
+     */
+    @Override
+    public int deleteSysEventsByEventIds(Long[] eventIds) {
+        for (Long eventId : eventIds) {
+            SysEvents sysEvents = sysEventsMapper.selectSysEventsByEventId(eventId);
+            if (!SysEvents.NO_START.equals(sysEvents.getStatus())) {
+                throw new ServiceException(sysEvents.getEventName() + ": 活动已开始，禁止删除");
+            }
+        }
+
+
+        sysEventsMapper.deleteCycleByEventIds(eventIds);
+//        sysEventsMapper.deleteMedalByEventIds(eventIds);
+        sysEventsMapper.deleteGradeByEventIds(eventIds);
+        return sysEventsMapper.deleteSysEventsByEventIds(eventIds);
+    }
+
+    /**
+     * 删除活动信息
+     *
+     * @param eventId 活动主键
+     * @return 结果
+     */
+    @Override
+    public int deleteSysEventsByEventId(Long eventId) {
+        return sysEventsMapper.deleteSysEventsByEventId(eventId);
+    }
+
+    @Override
+    public int addTemplate() {
+        String data = "{\"list\":[{\"eventTemplateId\":1,\"title\":\"参与家务劳动\",\"image\":\"1.png\",\"tags\":\"全能小达人\",\"intro\":\"参与日常家务劳动：根据各年级学生不同年龄，重点加强生活习惯养成和提高生活能力，做到“自己能做的事自己做，家庭与家人的事帮着做”：小学低年级侧重于养成良好生活习惯和做好个人服务劳动；中年级在巩固良好生活习惯的基础上尝试承包一项家庭服务劳动；高年级主动承作为家庭成员应尽的家庭劳动责任并勇于纠正个人不良生活习惯，减少家长的负担，主动为家庭作贡献。每位同学至少拍下两张参加家务劳动的照片上传系统，写下自己的感想同时拍照上传系统。\"},{\"eventTemplateId\":2,\"title\":\"课外书阅读\",\"image\":\"2.jpeg\",\"tags\":\"阅读小达人\",\"intro\":\"又到“世界读书日“，良好的阅读习惯可使孩子受益终身。培根说过：读书足以怡情，足以傅彩，足以长才。请同学们选择一本感兴趣的课外书籍，今天起，每天上传一段孩子阅读课外书籍的视频或语音，并写下一两句心得，坚持21天，您的孩子定将感受到读书的乐趣。\"},{\"eventTemplateId\":3,\"title\":\"和家长一起做家务\",\"image\":\"3.jpeg\",\"tags\":\"劳动小标兵\",\"intro\":\"每天做家务，坚持21天，您的孩子将更加独立！家长可以拍照或录制视频记录孩子做家务的过程。\"},{\"eventTemplateId\":4,\"title\":\"独立完成作业\",\"image\":\"4.jpeg\",\"tags\":\"养成小达人\",\"intro\":\"各位家长： 为了培养孩子独立思考的能力，在学习上克服困难，努力坚持，同时检验孩子每天的听课的效果，从今天起，请各位同学独立完成每日作业，家长用文字记录每日孩子完成作业情况，如“今日独立完成作业，用时：20分钟”。\"},{\"eventTemplateId\":5,\"title\":\"每日背诵\",\"image\":\"5.jpeg\",\"tags\":\"阅读小达人\",\"intro\":\"今天起，每天可用语音或视频记录孩子背诵内容，坚持下去，相信您的孩子将会养成背诵好习惯，收获满满~\"},{\"eventTemplateId\":6,\"title\":\"消防安全演练\",\"image\":\"6.jpeg\",\"tags\":\"安全小标兵\",\"intro\":\"各位家长： 为进一步强化学生消防安全意识，提高学生抗击突发事件的应变能力，今天将进行消防安全演练活动打卡，旨在使学生掌握消防、灾害安全知识，从小培养安全自护意识\"},{\"eventTemplateId\":7,\"title\":\"阳光体育健身活动\",\"image\":\"7.png\",\"tags\":\"运动小达人\",\"intro\":\"阳光体育健身活动：把“每天锻炼一小时，健康生活一辈子”的理念转化为良好的生活习惯，鼓励孩子强身健体，愉悦身心，促进学生德智体美全面发展。要求1-6年级学生：每天锻炼一小时，坚持每天跑步、跳绳、打球等体育活动。并自己绘制表格进行记录，记录内容要有时间、活动项目、完成情况和家长签名。可以对记录表格进行装饰，拍照上传系统，同时将自己运动时的照片、视频上传分享。\"},{\"eventTemplateId\":8,\"title\":\"安全教育\",\"image\":\"8.jpeg\",\"tags\":\"安全小标兵\",\"intro\":\"各位家长： 社会瞬息万变、日益复杂，有意识地培养孩子的安全意识、自我保护意识和防范意识，是非常有必要的。今天起，请家长每天教给孩子一两个安全知识，如：家用电器的使用和注意事项、化学物品和药品的使用、外出注意事项、不要随意与陌生人搭话或吃陌生人给的食物等，并以文字的形式简单说说每天学习的内容，让我们共同携手，防患于未然，给孩子一个更加美好的童年！\"},{\"eventTemplateId\":9,\"title\":\"节约资源废物回收与利用\",\"image\":\"9.png\",\"tags\":\"环保小标兵\",\"intro\":\"一、活动背景：通过收集可回收垃圾与废物再利用的活动让学生懂得废物再利用，既能保护环境，还可以创造价值。继承和发扬中华民族勤俭节约的传统美德。增强利用废物美化环境和造福社会的责任感。学生通过欣赏各式各样变废为宝的作品， 懂得废物也有可以被再次利用的价值， 认识到变废为宝对人们生活的影响的同时也能锻炼实际动手操作技能和培养大胆设想、 创造的能力。 二、 活动简介：1. 学生利用暑假时间收集家庭、 社区、 路边遗落的可回收垃圾； 2. 由学生与家长、 社区或开学后学校组织可回收垃圾出售， 所得费用为公益捐献；3. 学生利用废物进行手工制作， 变废为宝。 线上或开学后组织线下展览评比。 \"},{\"eventTemplateId\":10,\"title\":\"重阳节活动\",\"image\":\"10.png\",\"tags\":\"传承小标兵\",\"intro\":\"农历九月初九是我国古老的传统节日之一，古人把“九九相重”叫做“重阳节”，“九九”与“久久”同音，包含着长久长寿的含意。1989年，我国把农历九月初九定为“老人节”，也将传统与现代巧妙地结合，成为尊老、爱老、助老的“老人节”。本次开展重阳节感恩活动，旨在引导孩子学会感恩，树立良好的家庭美德观念，增强孩子的社会责任感。\"},{\"eventTemplateId\":11,\"title\":\"运动会\",\"image\":\"11.jpeg\",\"tags\":\"运动小达人\",\"intro\":\"各位家长好： 为让同学们爱上体育、参与体育、享受体育，进而养成积极参与锻炼的习惯，今天我们举行运动会打卡活动，意在增强学生体质，培养健康爱好、丰富课余生活、缓解学习压力、让学生们锻炼身体的同时也感受到运动的快乐\"},{\"eventTemplateId\":12,\"title\":\"学雷锋活动-雷锋精神伴我成长\",\"image\":\"12.png\",\"tags\":\"少队小标兵\",\"intro\":\"开展学习雷锋活动，切实加强学生的思想道德建设，帮助学生树立正确的人生观、世界观和价值观，以实际行动来弘扬雷锋精神，坚持“从我做起，从身边的小事做起”，促进学生良好行为习惯的形成，进一步推动我校的精神文明建设，为创建文明学校作出自己应有的贡献。\"},{\"eventTemplateId\":13,\"title\":\"赓续红色血脉,弘扬优良传统 ——红色教育实践活动\",\"image\":\"13.png\",\"tags\":\"爱国小标兵\",\"intro\":\"党的十九届六中全会通过的《中共中央关于党的百年奋斗重大成就和历史经验的决议》指出，要“赓续党的红色血脉，弘扬党的优良传统”。风雨与战火已经停息，如今的晴空万里与繁荣安定来之不易。利用假期去革命历史遗址、革命历史博物馆、革命先辈纪念馆、烈士陵园看看，又或是读一本红色书籍，看一场红色电影......在行走和阅读中追寻先辈足迹，感悟革命精神。本活动依托本地红色教育资源，对中小学学生进行符合身心特征的爱国主义教育，通过组织本次红色主题实践活动，使同学们能够结合实际，礼敬中国革命精神，传承红色文化，弘扬和践行社会主义核心价值观，为实现中华民族伟大复兴而努力学习，实现立德树人的教育宗旨。\"},{\"eventTemplateId\":14,\"title\":\"心理健康周活动\",\"image\":\"14.webp\",\"tags\":\"安全小标兵\",\"intro\":\"心理健康活动周是以健康周作为载体，通过为期一周的时间开展心理相关的活动内容，借助心理主题班会、沙盘游戏体验、心理电影赏析、心理绘画、趣味心理游戏等活动形式有效的推广心理健康的积极影响，帮助学生切身感受心理健康的重要性，为学生营造轻松和谐的心理环境。\"},{\"eventTemplateId\":15,\"title\":\"和我一起读书\",\"image\":\"15.png\",\"tags\":\"阅读小达人\",\"intro\":\"培养孩子“爱读书、读好书、喜读书”的良好习惯：利用假期和孩子一起选一本好书、读一批好文章，每天设“家庭读书时间”，陪孩子一起阅读，与孩子一起成长。认真阅读后撰写一篇读后感。开学时将读后感交给老师。学校将分年级进行评选优秀读后感，并从中推荐优秀作品参加评选。\"},{\"eventTemplateId\":16,\"title\":\"学期初规划-扬帆新学期 起航新征程\",\"image\":\"16.png\",\"tags\":\"养成小达人\",\"intro\":\"快乐的假期即将退场，新学期的钟声已经敲响，孩子们即翻开新学期的扉页，开启新的征程； 请大家仔细填写新学期规划\"},{\"eventTemplateId\":17,\"title\":\"小小志愿者\",\"image\":\"17.png\",\"tags\":\"环保小标兵\",\"intro\":\"一、活动背景：社区义工活动是一种让学生参与社区服务的机会，通过这种方式，学生可以了解社区的情况，培养社会责任感和团队协作精神。同时，这也是一个提高学生交际能力和个人素质的良好途径。通过本次义工活动，学生们将学会如何为社区服务，体验通过自己的努力获得成就感，同时，也可以增强学生参与社区服务的意识，培养积极向上的人生态度。活动简介：(1) 组织志愿者团队： 根据不同年龄段、 兴趣爱好等因素进行分组， 每个团队由一名教师或家长带队负责。(2) 制定计划： 根据当地的实际情况和需要， 制定相应的义工计划， 并进行详细安排和分配任务。通过校内宣传、 系统平台宣传、 社区通告等渠道宣传活动内容和意义， 并吸引更多的家长和孩子参与进来。(4) 开展义工活动： 根据计划， 义工团队将分别前往社区、 公园、 环保站等地， 进行清洁、 整治、 宣传等活动。 (5) 总结评估： 在活动结束后， 通过讨论和反思的方式， 总结活动经验和不足， 并对下一次活动做出改进和完善。 \"},{\"eventTemplateId\":18,\"title\":\"一起种菜，成长成才\",\"image\":\"18.png\",\"tags\":\"劳动小标兵\",\"intro\":\"活动背景：夏天是自然里的植物迅速生长的季节。学生在暑假期间进行种植活动，既可以培养孩子的责任感和爱心。还可以在植物的生长变化过程中提升耐心和观察能力，在种植记录的同时，养成记录和探究的能力和习惯。最终植物成熟后可以和同学老师和家人进行分享交流，提高表达力等诸多好处。 活动简介：1. 由学校或家长采购蔬菜种子或秧苗；2. 学生在暑期期间进行培养， 观察它们的生长过程。3. 学生完成蔬菜成长记录手册（ 手抄报、 绘画、 日记等形式）; 4. 学生分享自己的种植成果： 分享果实给同学或亲人、 由家长或带领学生一起将长成蔬菜烹饪成美食与家人共享。 \"},{\"eventTemplateId\":19,\"title\":\"第三届演讲比赛\",\"image\":\"19.webp\",\"tags\":\"才艺小达人\",\"intro\":\"第三届演讲比赛是结合学校“双百”挑战进行，让学生在读中行成阅读成果，在读中行成个人感悟，在读中将一本书的价值发挥到最大化，从而影响更多人读书，让“干净有序读书”校风深入人心。\"},{\"eventTemplateId\":20,\"title\":\"五一劳动节\",\"image\":\"20.webp\",\"tags\":\"劳动小标兵\",\"intro\":\"国际劳动节又称“五一国际劳动节”，是世界上80多个国家的全国性节日。定在每年的五月一日。它是全世界劳动人民共同拥有的节日。\"},{\"eventTemplateId\":21,\"title\":\"跳绳训练\",\"image\":\"21.jpeg\",\"tags\":\"养成小达人\",\"intro\":\"各位家长: 为了响应国家号召，增强学生学生体质、健全学生人格，从今天起，请每位学生进行“跳短绳”打卡，各位家长和学生根据自身情况，定量开展练习，并上传学生跳绳视频或照片。注意：运动前一定要做好充分热身准备，运动后做好拉伸。 【要求】 1 一、二年级 一分钟跳绳（50~100个）2组~3组 2 三、四年级 跳绳300个~400个 3 五、六年级 跳绳400个~500个\"},{\"eventTemplateId\":22,\"title\":\"英语朗读打卡\",\"image\":\"22.jpeg\",\"tags\":\"养成小达人\",\"intro\":\"每天坚持朗读课文或单词，并用语音或者视频记录下来哦~ 1.打卡形式: 音频和视频均可，朗读和背诵均可。 2. 打卡要求: a. 吐字清晰; b. 发音标准; c. 朗读或背诵熟练，无明显卡顿。\"},{\"eventTemplateId\":23,\"title\":\"安全演习\",\"image\":\"23.webp\",\"tags\":\"安全小标兵\",\"intro\":\"各位家长： 为了进一步做好学校防震减灾知识进校园活动，增强全校师生的防震减灾的安全意识，提高广大师生在地震中的逃生自救、互救能力和抵御、应对紧急突发事件的能力，保障广大师生的生命安全，学校在防震减灾日来临之际，开展了各类防灾减灾宣传活动。同时，各位家长以文字或图片的形式记录学生学习关于家庭防震知识的内容，让我们共同携手，防患于未然，给孩子一个更加美好的童年！\"},{\"eventTemplateId\":24,\"title\":\"爱眼护眼\",\"image\":\"24.jpeg\",\"tags\":\"养成小达人\",\"intro\":\"各位家长： 为了帮助孩子形成良好的生活方式，培养爱眼护眼的好习惯。从今天起，我们班发起一个21天的【爱眼护眼】打卡，请同学们每天完成作业后做眼保健操，以视频、语音、照片等形式参与打卡。\"},{\"eventTemplateId\":25,\"title\":\"每日家务\",\"image\":\"25.jpeg\",\"tags\":\"劳动小标兵\",\"intro\":\"各位家长： 简单的家务劳动，不仅能让孩子掌握一些简单的劳动技能，更重要的是树立孩子不劳而获可耻的观念和勤劳俭朴的品质，今天起，请让孩子每天做一些力所能及的家务，如帮忙提东西、扫地、搬凳子、收拾碗筷等，并用照片或视频的方式记录下来，帮助孩子逐步提高独立生活的能力。\"},{\"eventTemplateId\":26,\"title\":\"世界地球日\",\"image\":\"26.webp\",\"tags\":\"环保小标兵\",\"intro\":\"4月22日是世界地球日，我们只有一个地球，她是我们所有人的家园。地球母亲千疮百孔，需要我们所有人的关爱，号召学生参与环保行动，到社区捡拾垃圾，拧紧手龙头等等小小的举动。\"},{\"eventTemplateId\":27,\"title\":\"每日朗读\",\"image\":\"27.jpeg\",\"tags\":\"阅读小达人\",\"intro\":\"今天起，每天坚持用语音或视频记录孩子朗读内容，并文字记录所读页数，坚持30天，您的孩子一定会爱上朗读。 例：今日阅读《小王子》第5-10页\"},{\"eventTemplateId\":28,\"title\":\"建队日\",\"image\":\"28.webp\",\"tags\":\"少队小标兵\",\"intro\":\"10月13日是中国少年先锋队建队日,为了庆祝少先队员们的节日，我校大队部将对二年级学生进行第二批入队，让少先队员体验到加入少先队是一件无尚光荣之事，帮助新队员树立规范意识，老队员重温入队，增强作为一名少先队员的荣誉感和责任感。\"},{\"eventTemplateId\":29,\"title\":\"健康饮食\",\"image\":\"29.jpeg\",\"tags\":\"传承小标兵\",\"intro\":\"文字或图片记录孩子的吃饭情况，督促孩子养成不挑食的好习惯，如：今天吃饭没有剩饭，荤素搭配均衡，没有挑食。\"},{\"eventTemplateId\":30,\"title\":\"头脑奥林匹克省赛\",\"image\":\"30.webp\",\"tags\":\"科技小达人\",\"intro\":\"头脑奥林匹克是一项国际性的培养青少年创造力的活动，从幼儿园到大学的学生组织创造性解题的比赛，题目没有标准的正确答案，每个解题方法都是独特的。该活动已成功举办了41届。\"},{\"eventTemplateId\":31,\"title\":\"清明节活动\",\"image\":\"31.jpeg\",\"tags\":\"传承小标兵\",\"intro\":\"清明节，又称踏青节、行清节、三月节、祭祖节等，节期在仲春与暮春之交。清明节源自上古时代的祖先信仰与春祭礼俗，兼具自然与人文两大内涵，既是自然节气点，也是传统节日。扫墓祭祖与踏青郊游是清明节的两大礼俗主题，这两大传统礼俗主题在中国自古传承，至今不辍。\"},{\"eventTemplateId\":32,\"title\":\"学期末总结\",\"image\":\"32.png\",\"tags\":\"暂无奖章\",\"intro\":\"快乐的假期即将登场，这学期也即将结束。回顾一下本学期自己在生活、学习等方面的情况，总结一下本学期，给这学期画上一个圆满的句号！\"},{\"eventTemplateId\":33,\"title\":\"每日阅读\",\"image\":\"33.jpeg\",\"tags\":\"养成小达人\",\"intro\":\"各位家长： 读书，可丰富知识、扩大视野，锻炼孩子的思考能力和阅读能力，在培养创造性思维的同时，还能提高孩子的人格修养。今天起，每天将孩子所阅读的内容拍照上传，记录所读书籍和页数，坚持30天，您的孩子定将有所裨益。\"},{\"eventTemplateId\":34,\"title\":\"读新闻，讲新闻\",\"image\":\"34.jpeg\",\"tags\":\"阅读小达人\",\"intro\":\"各位家长： 复述是训练孩子口头表达能力的重要手段，在孩子深入理解故事内容的基础上，发展孩子的逻辑思维能力和社会交际能力，因此，今天开始，请各位同学，每天读或听一则新闻，并进行复述，以语音的形式上传，相信经过一段时间的练习，孩子的表达能力和想象力都得到一定的提高。\"},{\"eventTemplateId\":35,\"title\":\"挑战100本书发放活动\",\"image\":\"35.webp\",\"tags\":\"养成小达人\",\"intro\":\"为提高师生深度阅读，让高质量阅读成为一种常态。特开展师生共同挑战100本书活动。教师在读中分享，在读中漂流，在读中行成成果，促进专业发展。学生在读中进阶参加演讲比赛，在读中提高交流与表达能力，在读中提高语文素养。\"},{\"eventTemplateId\":36,\"title\":\"跑步练习\",\"image\":\"36.jpeg\",\"tags\":\"运动小达人\",\"intro\":\"各位家长: 为了响应国家号召，增强学生学生体质、健全学生人格，从今天起，请每位学生进行15~20分钟的“跑步练习”打卡，各位家长和学生根据自身情况，定量开展练习，并上传学生跑步时的视频或照片。注意：跑步前一定要做好充分热身准备，跑步后做好拉伸。\"},{\"eventTemplateId\":37,\"title\":\"开学第一课一分享观后感\",\"image\":\"37.jpeg\",\"tags\":\"学习小标兵\",\"intro\":\"9月1日20:00（星期四）央视一套、“学习强国”学习平台、国家中小学网络云平台同步播出，请家长陪孩子一起观看。观看后，可以 分享一下观后感。 节目聚焦喜迎党的二十大，以“奋斗成就梦想”为主题，请“八一勋章”获得者、时代楷模、脱贫攻坚楷模、科学工作者、奥运健儿、志愿者和青少年代表等上讲台，与全国中小学生共上一堂课，引导广大中小学生更好认识和认同中华文明，铸牢中华民族共同体意识，增强做中国人的志气、骨气、底气，从小坚定听党话、跟党走的决心和信心，努力实现德智体美劳全面发展，努力成长为担当民族复兴大任的时代新人。\"},{\"eventTemplateId\":38,\"title\":\"21天跑步计划\",\"image\":\"38.jpeg\",\"tags\":\"运动小达人\",\"intro\":\"每天坚持晨跑，只要三周，跑步就能成为生活的一部分，成为你的习惯。坚持21天，给孩子一份健康生活大礼。请家长们每天记录孩子的跑步地点及里程数，如：今天在公园慢跑2公里。\"},{\"eventTemplateId\":39,\"title\":\"每日读英语\",\"image\":\"39.jpeg\",\"tags\":\"养成小达人\",\"intro\":\"各位家长： 小学是学习英语的最佳时期，每天读一点英语，不仅可以提高孩子的英语兴趣，培养英语思维，还能提高孩子的英语语感和口语能力，从今天起，请同学们每天坚持读一段英语文章或英文新闻，并以语音的形式上传，看一看，谁读的又流利又优美。\"}]}";
+        JSONObject jsonObject = JSONObject.parseObject(data);
+        JSONArray list = jsonObject.getJSONArray("list");
+        List<SysEventsTemplate> sysEventsTemplates = list.toJavaList(SysEventsTemplate.class);
+        for (SysEventsTemplate sysEventsTemplate : sysEventsTemplates) {
+            sysEventsTemplate.setImage("/profile/template/" + sysEventsTemplate.getImage());
+        }
+        return sysEventsMapper.addTemplate(sysEventsTemplates);
+    }
+
+    @Override
+    public List<SysEventsTemplate> listTemplate() {
+        return sysEventsMapper.listTemplate();
+    }
+
+    @Override
+    public List<SysEventCycle> cycleRecords(SysEventCycle eventCycle) {
+        return sysEventsMapper.cycleRecords(eventCycle);
+    }
+
+    @Override
+    public List<SysEventCycleStudent> cycleRecordsByStudent(SysEventCycleStudent eventCycleStudent) {
+        return sysEventsMapper.cycleRecordsByStudent(eventCycleStudent);
+    }
+
+    @Override
+    public List<SysEvents> selectCountByEventTagType(SysEvents events) {
+        return sysEventsMapper.selectCountByEventTagType(events);
+    }
+
+    @Override
+    public List<SysEvents> selectEventIndex(String semesterId) {
+        return sysEventsMapper.selectEventIndex(semesterId);
+    }
+
+    public static void main(String[] args) {
+        String data = "{\"list\":[{\"eventTemplateId\":1,\"title\":\"参与家务劳动\",\"image\":\"1.png\",\"tags\":\"全能小达人\",\"intro\":\"参与日常家务劳动：根据各年级学生不同年龄，重点加强生活习惯养成和提高生活能力，做到“自己能做的事自己做，家庭与家人的事帮着做”：小学低年级侧重于养成良好生活习惯和做好个人服务劳动；中年级在巩固良好生活习惯的基础上尝试承包一项家庭服务劳动；高年级主动承作为家庭成员应尽的家庭劳动责任并勇于纠正个人不良生活习惯，减少家长的负担，主动为家庭作贡献。每位同学至少拍下两张参加家务劳动的照片上传系统，写下自己的感想同时拍照上传系统。\"},{\"eventTemplateId\":2,\"title\":\"课外书阅读\",\"image\":\"2.jpeg\",\"tags\":\"阅读小达人\",\"intro\":\"又到“世界读书日“，良好的阅读习惯可使孩子受益终身。培根说过：读书足以怡情，足以傅彩，足以长才。请同学们选择一本感兴趣的课外书籍，今天起，每天上传一段孩子阅读课外书籍的视频或语音，并写下一两句心得，坚持21天，您的孩子定将感受到读书的乐趣。\"},{\"eventTemplateId\":3,\"title\":\"和家长一起做家务\",\"image\":\"3.jpeg\",\"tags\":\"劳动小标兵\",\"intro\":\"每天做家务，坚持21天，您的孩子将更加独立！家长可以拍照或录制视频记录孩子做家务的过程。\"},{\"eventTemplateId\":4,\"title\":\"独立完成作业\",\"image\":\"4.jpeg\",\"tags\":\"养成小达人\",\"intro\":\"各位家长： 为了培养孩子独立思考的能力，在学习上克服困难，努力坚持，同时检验孩子每天的听课的效果，从今天起，请各位同学独立完成每日作业，家长用文字记录每日孩子完成作业情况，如“今日独立完成作业，用时：20分钟”。\"},{\"eventTemplateId\":5,\"title\":\"每日背诵\",\"image\":\"5.jpeg\",\"tags\":\"阅读小达人\",\"intro\":\"今天起，每天可用语音或视频记录孩子背诵内容，坚持下去，相信您的孩子将会养成背诵好习惯，收获满满~\"},{\"eventTemplateId\":6,\"title\":\"消防安全演练\",\"image\":\"6.jpeg\",\"tags\":\"安全小标兵\",\"intro\":\"各位家长： 为进一步强化学生消防安全意识，提高学生抗击突发事件的应变能力，今天将进行消防安全演练活动打卡，旨在使学生掌握消防、灾害安全知识，从小培养安全自护意识\"},{\"eventTemplateId\":7,\"title\":\"阳光体育健身活动\",\"image\":\"7.png\",\"tags\":\"运动小达人\",\"intro\":\"阳光体育健身活动：把“每天锻炼一小时，健康生活一辈子”的理念转化为良好的生活习惯，鼓励孩子强身健体，愉悦身心，促进学生德智体美全面发展。要求1-6年级学生：每天锻炼一小时，坚持每天跑步、跳绳、打球等体育活动。并自己绘制表格进行记录，记录内容要有时间、活动项目、完成情况和家长签名。可以对记录表格进行装饰，拍照上传系统，同时将自己运动时的照片、视频上传分享。\"},{\"eventTemplateId\":8,\"title\":\"安全教育\",\"image\":\"8.jpeg\",\"tags\":\"安全小标兵\",\"intro\":\"各位家长： 社会瞬息万变、日益复杂，有意识地培养孩子的安全意识、自我保护意识和防范意识，是非常有必要的。今天起，请家长每天教给孩子一两个安全知识，如：家用电器的使用和注意事项、化学物品和药品的使用、外出注意事项、不要随意与陌生人搭话或吃陌生人给的食物等，并以文字的形式简单说说每天学习的内容，让我们共同携手，防患于未然，给孩子一个更加美好的童年！\"},{\"eventTemplateId\":9,\"title\":\"节约资源废物回收与利用\",\"image\":\"9.png\",\"tags\":\"环保小标兵\",\"intro\":\"一、活动背景：通过收集可回收垃圾与废物再利用的活动让学生懂得废物再利用，既能保护环境，还可以创造价值。继承和发扬中华民族勤俭节约的传统美德。增强利用废物美化环境和造福社会的责任感。学生通过欣赏各式各样变废为宝的作品， 懂得废物也有可以被再次利用的价值， 认识到变废为宝对人们生活的影响的同时也能锻炼实际动手操作技能和培养大胆设想、 创造的能力。 二、 活动简介：1. 学生利用暑假时间收集家庭、 社区、 路边遗落的可回收垃圾； 2. 由学生与家长、 社区或开学后学校组织可回收垃圾出售， 所得费用为公益捐献；3. 学生利用废物进行手工制作， 变废为宝。 线上或开学后组织线下展览评比。 \"},{\"eventTemplateId\":10,\"title\":\"重阳节活动\",\"image\":\"10.png\",\"tags\":\"传承小标兵\",\"intro\":\"农历九月初九是我国古老的传统节日之一，古人把“九九相重”叫做“重阳节”，“九九”与“久久”同音，包含着长久长寿的含意。1989年，我国把农历九月初九定为“老人节”，也将传统与现代巧妙地结合，成为尊老、爱老、助老的“老人节”。本次开展重阳节感恩活动，旨在引导孩子学会感恩，树立良好的家庭美德观念，增强孩子的社会责任感。\"},{\"eventTemplateId\":11,\"title\":\"运动会\",\"image\":\"11.jpeg\",\"tags\":\"运动小达人\",\"intro\":\"各位家长好： 为让同学们爱上体育、参与体育、享受体育，进而养成积极参与锻炼的习惯，今天我们举行运动会打卡活动，意在增强学生体质，培养健康爱好、丰富课余生活、缓解学习压力、让学生们锻炼身体的同时也感受到运动的快乐\"},{\"eventTemplateId\":12,\"title\":\"学雷锋活动-雷锋精神伴我成长\",\"image\":\"12.png\",\"tags\":\"少队小标兵\",\"intro\":\"开展学习雷锋活动，切实加强学生的思想道德建设，帮助学生树立正确的人生观、世界观和价值观，以实际行动来弘扬雷锋精神，坚持“从我做起，从身边的小事做起”，促进学生良好行为习惯的形成，进一步推动我校的精神文明建设，为创建文明学校作出自己应有的贡献。\"},{\"eventTemplateId\":13,\"title\":\"赓续红色血脉,弘扬优良传统 ——红色教育实践活动\",\"image\":\"13.png\",\"tags\":\"爱国小标兵\",\"intro\":\"党的十九届六中全会通过的《中共中央关于党的百年奋斗重大成就和历史经验的决议》指出，要“赓续党的红色血脉，弘扬党的优良传统”。风雨与战火已经停息，如今的晴空万里与繁荣安定来之不易。利用假期去革命历史遗址、革命历史博物馆、革命先辈纪念馆、烈士陵园看看，又或是读一本红色书籍，看一场红色电影......在行走和阅读中追寻先辈足迹，感悟革命精神。本活动依托本地红色教育资源，对中小学学生进行符合身心特征的爱国主义教育，通过组织本次红色主题实践活动，使同学们能够结合实际，礼敬中国革命精神，传承红色文化，弘扬和践行社会主义核心价值观，为实现中华民族伟大复兴而努力学习，实现立德树人的教育宗旨。\"},{\"eventTemplateId\":14,\"title\":\"心理健康周活动\",\"image\":\"14.webp\",\"tags\":\"安全小标兵\",\"intro\":\"心理健康活动周是以健康周作为载体，通过为期一周的时间开展心理相关的活动内容，借助心理主题班会、沙盘游戏体验、心理电影赏析、心理绘画、趣味心理游戏等活动形式有效的推广心理健康的积极影响，帮助学生切身感受心理健康的重要性，为学生营造轻松和谐的心理环境。\"},{\"eventTemplateId\":15,\"title\":\"和我一起读书\",\"image\":\"15.png\",\"tags\":\"阅读小达人\",\"intro\":\"培养孩子“爱读书、读好书、喜读书”的良好习惯：利用假期和孩子一起选一本好书、读一批好文章，每天设“家庭读书时间”，陪孩子一起阅读，与孩子一起成长。认真阅读后撰写一篇读后感。开学时将读后感交给老师。学校将分年级进行评选优秀读后感，并从中推荐优秀作品参加评选。\"},{\"eventTemplateId\":16,\"title\":\"学期初规划-扬帆新学期 起航新征程\",\"image\":\"16.png\",\"tags\":\"养成小达人\",\"intro\":\"快乐的假期即将退场，新学期的钟声已经敲响，孩子们即翻开新学期的扉页，开启新的征程； 请大家仔细填写新学期规划\"},{\"eventTemplateId\":17,\"title\":\"小小志愿者\",\"image\":\"17.png\",\"tags\":\"环保小标兵\",\"intro\":\"一、活动背景：社区义工活动是一种让学生参与社区服务的机会，通过这种方式，学生可以了解社区的情况，培养社会责任感和团队协作精神。同时，这也是一个提高学生交际能力和个人素质的良好途径。通过本次义工活动，学生们将学会如何为社区服务，体验通过自己的努力获得成就感，同时，也可以增强学生参与社区服务的意识，培养积极向上的人生态度。活动简介：(1) 组织志愿者团队： 根据不同年龄段、 兴趣爱好等因素进行分组， 每个团队由一名教师或家长带队负责。(2) 制定计划： 根据当地的实际情况和需要， 制定相应的义工计划， 并进行详细安排和分配任务。通过校内宣传、 系统平台宣传、 社区通告等渠道宣传活动内容和意义， 并吸引更多的家长和孩子参与进来。(4) 开展义工活动： 根据计划， 义工团队将分别前往社区、 公园、 环保站等地， 进行清洁、 整治、 宣传等活动。 (5) 总结评估： 在活动结束后， 通过讨论和反思的方式， 总结活动经验和不足， 并对下一次活动做出改进和完善。 \"},{\"eventTemplateId\":18,\"title\":\"一起种菜，成长成才\",\"image\":\"18.png\",\"tags\":\"劳动小标兵\",\"intro\":\"活动背景：夏天是自然里的植物迅速生长的季节。学生在暑假期间进行种植活动，既可以培养孩子的责任感和爱心。还可以在植物的生长变化过程中提升耐心和观察能力，在种植记录的同时，养成记录和探究的能力和习惯。最终植物成熟后可以和同学老师和家人进行分享交流，提高表达力等诸多好处。 活动简介：1. 由学校或家长采购蔬菜种子或秧苗；2. 学生在暑期期间进行培养， 观察它们的生长过程。3. 学生完成蔬菜成长记录手册（ 手抄报、 绘画、 日记等形式）; 4. 学生分享自己的种植成果： 分享果实给同学或亲人、 由家长或带领学生一起将长成蔬菜烹饪成美食与家人共享。 \"},{\"eventTemplateId\":19,\"title\":\"第三届演讲比赛\",\"image\":\"19.webp\",\"tags\":\"才艺小达人\",\"intro\":\"第三届演讲比赛是结合学校“双百”挑战进行，让学生在读中行成阅读成果，在读中行成个人感悟，在读中将一本书的价值发挥到最大化，从而影响更多人读书，让“干净有序读书”校风深入人心。\"},{\"eventTemplateId\":20,\"title\":\"五一劳动节\",\"image\":\"20.webp\",\"tags\":\"劳动小标兵\",\"intro\":\"国际劳动节又称“五一国际劳动节”，是世界上80多个国家的全国性节日。定在每年的五月一日。它是全世界劳动人民共同拥有的节日。\"},{\"eventTemplateId\":21,\"title\":\"跳绳训练\",\"image\":\"21.jpeg\",\"tags\":\"养成小达人\",\"intro\":\"各位家长: 为了响应国家号召，增强学生学生体质、健全学生人格，从今天起，请每位学生进行“跳短绳”打卡，各位家长和学生根据自身情况，定量开展练习，并上传学生跳绳视频或照片。注意：运动前一定要做好充分热身准备，运动后做好拉伸。 【要求】 1 一、二年级 一分钟跳绳（50~100个）2组~3组 2 三、四年级 跳绳300个~400个 3 五、六年级 跳绳400个~500个\"},{\"eventTemplateId\":22,\"title\":\"英语朗读打卡\",\"image\":\"22.jpeg\",\"tags\":\"养成小达人\",\"intro\":\"每天坚持朗读课文或单词，并用语音或者视频记录下来哦~ 1.打卡形式: 音频和视频均可，朗读和背诵均可。 2. 打卡要求: a. 吐字清晰; b. 发音标准; c. 朗读或背诵熟练，无明显卡顿。\"},{\"eventTemplateId\":23,\"title\":\"安全演习\",\"image\":\"23.webp\",\"tags\":\"安全小标兵\",\"intro\":\"各位家长： 为了进一步做好学校防震减灾知识进校园活动，增强全校师生的防震减灾的安全意识，提高广大师生在地震中的逃生自救、互救能力和抵御、应对紧急突发事件的能力，保障广大师生的生命安全，学校在防震减灾日来临之际，开展了各类防灾减灾宣传活动。同时，各位家长以文字或图片的形式记录学生学习关于家庭防震知识的内容，让我们共同携手，防患于未然，给孩子一个更加美好的童年！\"},{\"eventTemplateId\":24,\"title\":\"爱眼护眼\",\"image\":\"24.jpeg\",\"tags\":\"养成小达人\",\"intro\":\"各位家长： 为了帮助孩子形成良好的生活方式，培养爱眼护眼的好习惯。从今天起，我们班发起一个21天的【爱眼护眼】打卡，请同学们每天完成作业后做眼保健操，以视频、语音、照片等形式参与打卡。\"},{\"eventTemplateId\":25,\"title\":\"每日家务\",\"image\":\"25.jpeg\",\"tags\":\"劳动小标兵\",\"intro\":\"各位家长： 简单的家务劳动，不仅能让孩子掌握一些简单的劳动技能，更重要的是树立孩子不劳而获可耻的观念和勤劳俭朴的品质，今天起，请让孩子每天做一些力所能及的家务，如帮忙提东西、扫地、搬凳子、收拾碗筷等，并用照片或视频的方式记录下来，帮助孩子逐步提高独立生活的能力。\"},{\"eventTemplateId\":26,\"title\":\"世界地球日\",\"image\":\"26.webp\",\"tags\":\"环保小标兵\",\"intro\":\"4月22日是世界地球日，我们只有一个地球，她是我们所有人的家园。地球母亲千疮百孔，需要我们所有人的关爱，号召学生参与环保行动，到社区捡拾垃圾，拧紧手龙头等等小小的举动。\"},{\"eventTemplateId\":27,\"title\":\"每日朗读\",\"image\":\"27.jpeg\",\"tags\":\"阅读小达人\",\"intro\":\"今天起，每天坚持用语音或视频记录孩子朗读内容，并文字记录所读页数，坚持30天，您的孩子一定会爱上朗读。 例：今日阅读《小王子》第5-10页\"},{\"eventTemplateId\":28,\"title\":\"建队日\",\"image\":\"28.webp\",\"tags\":\"少队小标兵\",\"intro\":\"10月13日是中国少年先锋队建队日,为了庆祝少先队员们的节日，我校大队部将对二年级学生进行第二批入队，让少先队员体验到加入少先队是一件无尚光荣之事，帮助新队员树立规范意识，老队员重温入队，增强作为一名少先队员的荣誉感和责任感。\"},{\"eventTemplateId\":29,\"title\":\"健康饮食\",\"image\":\"29.jpeg\",\"tags\":\"传承小标兵\",\"intro\":\"文字或图片记录孩子的吃饭情况，督促孩子养成不挑食的好习惯，如：今天吃饭没有剩饭，荤素搭配均衡，没有挑食。\"},{\"eventTemplateId\":30,\"title\":\"头脑奥林匹克省赛\",\"image\":\"30.webp\",\"tags\":\"科技小达人\",\"intro\":\"头脑奥林匹克是一项国际性的培养青少年创造力的活动，从幼儿园到大学的学生组织创造性解题的比赛，题目没有标准的正确答案，每个解题方法都是独特的。该活动已成功举办了41届。\"},{\"eventTemplateId\":31,\"title\":\"清明节活动\",\"image\":\"31.jpeg\",\"tags\":\"传承小标兵\",\"intro\":\"清明节，又称踏青节、行清节、三月节、祭祖节等，节期在仲春与暮春之交。清明节源自上古时代的祖先信仰与春祭礼俗，兼具自然与人文两大内涵，既是自然节气点，也是传统节日。扫墓祭祖与踏青郊游是清明节的两大礼俗主题，这两大传统礼俗主题在中国自古传承，至今不辍。\"},{\"eventTemplateId\":32,\"title\":\"学期末总结\",\"image\":\"32.png\",\"tags\":\"暂无奖章\",\"intro\":\"快乐的假期即将登场，这学期也即将结束。回顾一下本学期自己在生活、学习等方面的情况，总结一下本学期，给这学期画上一个圆满的句号！\"},{\"eventTemplateId\":33,\"title\":\"每日阅读\",\"image\":\"33.jpeg\",\"tags\":\"养成小达人\",\"intro\":\"各位家长： 读书，可丰富知识、扩大视野，锻炼孩子的思考能力和阅读能力，在培养创造性思维的同时，还能提高孩子的人格修养。今天起，每天将孩子所阅读的内容拍照上传，记录所读书籍和页数，坚持30天，您的孩子定将有所裨益。\"},{\"eventTemplateId\":34,\"title\":\"读新闻，讲新闻\",\"image\":\"34.jpeg\",\"tags\":\"阅读小达人\",\"intro\":\"各位家长： 复述是训练孩子口头表达能力的重要手段，在孩子深入理解故事内容的基础上，发展孩子的逻辑思维能力和社会交际能力，因此，今天开始，请各位同学，每天读或听一则新闻，并进行复述，以语音的形式上传，相信经过一段时间的练习，孩子的表达能力和想象力都得到一定的提高。\"},{\"eventTemplateId\":35,\"title\":\"挑战100本书发放活动\",\"image\":\"35.webp\",\"tags\":\"养成小达人\",\"intro\":\"为提高师生深度阅读，让高质量阅读成为一种常态。特开展师生共同挑战100本书活动。教师在读中分享，在读中漂流，在读中行成成果，促进专业发展。学生在读中进阶参加演讲比赛，在读中提高交流与表达能力，在读中提高语文素养。\"},{\"eventTemplateId\":36,\"title\":\"跑步练习\",\"image\":\"36.jpeg\",\"tags\":\"运动小达人\",\"intro\":\"各位家长: 为了响应国家号召，增强学生学生体质、健全学生人格，从今天起，请每位学生进行15~20分钟的“跑步练习”打卡，各位家长和学生根据自身情况，定量开展练习，并上传学生跑步时的视频或照片。注意：跑步前一定要做好充分热身准备，跑步后做好拉伸。\"},{\"eventTemplateId\":37,\"title\":\"开学第一课一分享观后感\",\"image\":\"37.jpeg\",\"tags\":\"学习小标兵\",\"intro\":\"9月1日20:00（星期四）央视一套、“学习强国”学习平台、国家中小学网络云平台同步播出，请家长陪孩子一起观看。观看后，可以 分享一下观后感。 节目聚焦喜迎党的二十大，以“奋斗成就梦想”为主题，请“八一勋章”获得者、时代楷模、脱贫攻坚楷模、科学工作者、奥运健儿、志愿者和青少年代表等上讲台，与全国中小学生共上一堂课，引导广大中小学生更好认识和认同中华文明，铸牢中华民族共同体意识，增强做中国人的志气、骨气、底气，从小坚定听党话、跟党走的决心和信心，努力实现德智体美劳全面发展，努力成长为担当民族复兴大任的时代新人。\"},{\"eventTemplateId\":38,\"title\":\"21天跑步计划\",\"image\":\"38.jpeg\",\"tags\":\"运动小达人\",\"intro\":\"每天坚持晨跑，只要三周，跑步就能成为生活的一部分，成为你的习惯。坚持21天，给孩子一份健康生活大礼。请家长们每天记录孩子的跑步地点及里程数，如：今天在公园慢跑2公里。\"},{\"eventTemplateId\":39,\"title\":\"每日读英语\",\"image\":\"39.jpeg\",\"tags\":\"养成小达人\",\"intro\":\"各位家长： 小学是学习英语的最佳时期，每天读一点英语，不仅可以提高孩子的英语兴趣，培养英语思维，还能提高孩子的英语语感和口语能力，从今天起，请同学们每天坚持读一段英语文章或英文新闻，并以语音的形式上传，看一看，谁读的又流利又优美。\"}]}";
+        JSONObject jsonObject = JSONObject.parseObject(data);
+        JSONArray list = jsonObject.getJSONArray("list");
+        List<SysEventsTemplate> sysEventsTemplates = list.toJavaList(SysEventsTemplate.class);
+        System.out.println(JSONObject.toJSONString(sysEventsTemplates));
+    }
+}

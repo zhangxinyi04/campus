@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.z.system.mapper.SysResourcesMapper">
+
+	<resultMap type="SysResources" id="SysResourcesResult">
+		<id     property="resourcesId"         column="resources_id"        />
+		<result property="resourcesName"       column="resources_name"      />
+		<result property="parentName"     column="parent_name"    />
+		<result property="parentId"       column="parent_id"      />
+		<result property="orderNum"       column="order_num"      />
+		<result property="createBy"       column="create_by"      />
+		<result property="createTime"     column="create_time"    />
+		<result property="updateTime"     column="update_time"    />
+		<result property="updateBy"       column="update_by"      />
+		<result property="remark"         column="remark"         />
+	</resultMap>
+
+	<sql id="selectResourcesVo">
+        select resources_id, resources_name, parent_id, order_num, create_time
+		from sys_resources
+    </sql>
+    
+
+
+	<select id="selectResourcesList" parameterType="SysResources" resultMap="SysResourcesResult">
+		select  m.resources_id, m.parent_id, m.resources_name, m.order_num, m.create_time
+		from sys_resources m
+		order by m.parent_id, m.order_num
+	</select>
+    
+
+	<select id="selectResourcesById" parameterType="Long" resultMap="SysResourcesResult">
+		<include refid="selectResourcesVo"/>
+		where resources_id = #{resourcesId}
+	</select>
+	
+	<select id="hasChildByResourcesId" resultType="Integer">
+	    select count(1) from sys_Resources where parent_id = #{resourcesId}
+	</select>
+	
+	<select id="checkResourcesNameUnique" parameterType="SysResources" resultMap="SysResourcesResult">
+		<include refid="selectResourcesVo"/>
+		where resources_name=#{resourcesName} and parent_id = #{parentId} limit 1
+	</select>
+	
+	<update id="updateResources" parameterType="SysResources">
+		update sys_resources
+		<set>
+			<if test="resourcesName != null and resourcesName != ''">resources_name = #{resourcesName},</if>
+			<if test="parentId != null">parent_id = #{parentId},</if>
+			<if test="orderNum != null">order_num = #{orderNum},</if>
+			<if test="status != null">status = #{status},</if>
+			<if test="remark != null and remark != ''">remark = #{remark},</if>
+			<if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+			update_time = sysdate()
+		</set>
+		where resources_id = #{resourcesId}
+	</update>
+
+	<insert id="insertResources" parameterType="SysResources">
+		insert into sys_resources(
+		<if test="resourcesId != null and resourcesId != 0">resources_id,</if>
+		<if test="parentId != null and parentId != 0">parent_id,</if>
+		<if test="resourcesName != null and resourcesName != ''">resources_name,</if>
+		<if test="orderNum != null">order_num,</if>
+		<if test="status != null">status,</if>
+		<if test="remark != null and remark != ''">remark,</if>
+		<if test="createBy != null and createBy != ''">create_by,</if>
+		create_time
+		)values(
+		<if test="resourcesId != null and resourcesId != 0">#{resourcesId},</if>
+		<if test="parentId != null and parentId != 0">#{parentId},</if>
+		<if test="resourcesName != null and resourcesName != ''">#{resourcesName},</if>
+		<if test="orderNum != null">#{orderNum},</if>
+		<if test="status != null">#{status},</if>
+		<if test="remark != null and remark != ''">#{remark},</if>
+		<if test="createBy != null and createBy != ''">#{createBy},</if>
+		sysdate()
+		)
+	</insert>
+	
+	<delete id="deleteResourcesById" parameterType="Long">
+	    delete from sys_resources where resources_id = #{resourcesId}
+	</delete>
+
+</mapper> 

@@ -1,0 +1,232 @@
+{    
+	 "easycom": {
+	        "^u-(.*)": "@/uview-ui/components/u-$1/u-$1.vue"
+	    },
+	"pages": [ //pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages
+	   {
+		"path": "pages/login/index",
+		"style": {
+			"navigationBarTitleText": "登录"
+		 }
+	   },
+		{
+			"path": "pages/index/index",
+			"style": {
+				"navigationBarTitleText": "首页"
+				// "navigationStyle": "custom"
+			}
+		},{
+			"path": "pages/PersonalCenter/index",
+			"style": {
+				"navigationBarTitleText": "个人中心"
+			}
+		},
+		{
+			"path": "pages/atlas/index",
+			"style": {
+				"navigationBarTitleText": "活动"
+			}
+		},
+		{
+			"path": "pages/course/index",
+			"style": {
+				"navigationBarTitleText": "课程"
+			}
+		},
+		{
+			"path": "pages/index/classroomassessment",
+			"style": {
+				"navigationBarTitleText": "课程评价"
+			}
+		},{
+			"path": "pages/index/evaluate",
+			"style": {
+				"navigationBarTitleText": "课程评价"
+			}
+		},{
+			"path": "pages/atlas/EventDetails",
+			"style": {
+				"navigationBarTitleText": "活动详情"
+			}
+		},{
+			"path": "pages/index/initiate",
+			"style": {
+				"navigationBarTitleText": "发起活动"
+			}
+		},{
+			"path": "pages/index/ActivityTemplate",
+			"style": {
+				"navigationBarTitleText": "选择模版"
+			}
+		},{
+			"path": "pages/index/Studentevaluation",
+			"style": {
+				"navigationBarTitleText": "学生评价"
+			}
+		},{
+			"path": "pages/index/groupmanagement",
+			"style": {
+				"navigationBarTitleText": "小组管理"
+			}
+		},{
+			"path": "pages/index/Textreview",
+			"style": {
+				"navigationBarTitleText": "文字点评"
+			}
+		},{
+			"path": "pages/atlas/Checkinrecord",
+			"style": {
+				"navigationBarTitleText": "打卡记录"
+			}
+		},{
+			"path": "pages/atlas/Studentclock",
+			"style": {
+				"navigationBarTitleText": "学生打卡记录"
+			}
+		},{
+			"path": "pages/components/success",
+			"style": {
+				"navigationBarTitleText": "提交成功"
+			}
+		},{
+			"path": "pages/PersonalCenter/teacherEvaluation/teacherEvaluation",
+			"style": {
+				"navigationBarTitleText": "选择班级"
+			}
+		},{
+			"path": "pages/PersonalCenter/teacherEvaluation/classroomassessment",
+			"style": {
+				"navigationBarTitleText": "选择学生"
+			}
+		},{
+			"path": "pages/PersonalCenter/teacherEvaluation/GrowthReport",
+			"style": {
+				"navigationBarTitleText": "成长报告"
+			}
+		},{
+			"path": "pages/PersonalCenter/teacherEvaluation/Parentsmessage",
+			"style": {
+				"navigationBarTitleText": "教师寄语"
+			}
+		}
+	],
+		"subPackages": [{
+			"root": "subpackage1",
+			"pages": [	{
+				"path": "ChargingGuide",
+				"style": {
+					"navigationBarTitleText": "家长首页"
+				}
+			},
+			{
+				"path": "homepage/record",
+				"style": {
+					"navigationBarTitleText": "记录"
+				}
+			},{
+				"path": "homepage/homepage",
+				"style": {
+					"navigationBarTitleText": "回龙观第二小学"
+				}
+			},{
+				"path": "homepage/allactivities",
+				"style": {
+					"navigationBarTitleText": "活动"
+				}
+			},{
+				"path": "homepage/EventDetails",
+				"style": {
+					"navigationBarTitleText": "活动详情"
+				}
+			},{
+				"path": "homepage/signup",
+				"style": {
+					"navigationBarTitleText": "参与活动"
+				}
+			},{
+				"path": "homepage/ClassCircle",
+				"style": {
+					"navigationBarTitleText": "班级圈"
+				}
+			},
+			{
+				"path": "PersonalCenter/index",
+				"style": {
+					"navigationBarTitleText": "我的"
+				}
+			},
+			{
+				"path": "PersonalCenter/GrowthReport",
+				"style": {
+					"navigationBarTitleText": "成长报告"
+				}
+			},
+			{
+				"path": "PersonalCenter/Parentsmessage",
+				"style": {
+					"navigationBarTitleText": "家长寄语"
+				}
+			},
+			{
+				"path": "PersonalCenter/Mylevel",
+				"style": {
+					"navigationBarTitleText": "我的等级"
+				}
+			},
+			{
+				"path": "PersonalCenter/transcript",
+				"style": {
+					"navigationBarTitleText": "成绩单"
+				}
+			}
+			]
+		}],
+	
+	"globalStyle": {
+		"navigationBarTextStyle": "black",
+		"navigationBarTitleText": "uni-app",
+		"navigationBarBackgroundColor": "#F8F8F8",
+		"backgroundColor": "#F8F8F8"
+	},
+	"uniIdRouter": {},
+	"condition" : { //模式配置，仅开发期间生效
+		"current": 0, //当前激活的模式(list 的索引项)
+		"list": [
+			{
+				"name": "", //模式名称
+				"path": "", //启动页面，必选
+				"query": "" //启动参数，在页面的onLoad函数里面得到
+			}
+		]
+	},
+	"tabBar": {
+		"color": "#333",
+		"selectedColor": "#a8700d",
+		"backgroundColor": "#ffffff",
+		"borderStyle": "black",
+		"list": [{
+				"pagePath": "pages/index/index",
+				"text": "首页",
+				"iconPath": "static/page1.png",
+				"selectedIconPath": "/static/page2.png"
+			},{
+				"pagePath": "pages/atlas/index",
+				"text": "活动",
+				"iconPath": "/static/ditu2.png",
+				"selectedIconPath": "/static/ditu1.png"
+			},
+			// {
+			// 	"pagePath": "pages/course/index",
+			// 	"text": "课程",
+			// 	"iconPath": "/static/ditu2.png",
+			// 	"selectedIconPath": "/static/ditu1.png"
+			// },
+			{
+				"pagePath": "pages/PersonalCenter/index",
+				"text": "我的",
+				"iconPath": "/static/wode2.png",
+				"selectedIconPath": "/static/wode1.png"
+			}
+		]
+	}
+}

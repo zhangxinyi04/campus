@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.z.system.mapper.SysStudentCommentMapper">
+
+    <resultMap type="SysStudentComment" id="SysStudentCommentResult">
+        <result property="studentCommentId" column="student_comment_id"/>
+        <result property="studentId" column="student_id"/>
+        <result property="semesterId" column="semester_id"/>
+        <result property="content" column="content"/>
+        <result property="teacherContent" column="teacher_content"/>
+    </resultMap>
+
+    <sql id="selectSysStudentCommentVo">
+        select student_comment_id, student_id, semester_id, content, teacher_content
+        from sys_student_comment
+    </sql>
+
+    <select id="selectSysStudentCommentList" parameterType="SysStudentComment" resultMap="SysStudentCommentResult">
+        <include refid="selectSysStudentCommentVo"/>
+        <where>
+            <if test="studentId != null  and studentId != ''">and student_id = #{studentId}</if>
+            <if test="semesterId != null  and semesterId != ''">and semester_id = #{semesterId}</if>
+            <if test="studentIds != null">and student_id in
+                <foreach collection="studentIds" item="studentId" open="(" separator="," close=")">
+                    #{studentId}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+    <select id="selectSysStudentCommentByStudentCommentId" parameterType="Long" resultMap="SysStudentCommentResult">
+        <include refid="selectSysStudentCommentVo"/>
+        where student_comment_id = #{studentCommentId}
+    </select>
+
+    <insert id="insertSysStudentComment" parameterType="SysStudentComment" useGeneratedKeys="true"
+            keyProperty="studentCommentId">
+        insert into sys_student_comment
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="studentId != null">student_id,</if>
+            <if test="semesterId != null">semester_id,</if>
+            <if test="content != null">content,</if>
+            <if test="teacherContent != null">teacher_content,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="studentId != null">#{studentId},</if>
+            <if test="semesterId != null">#{semesterId},</if>
+            <if test="content != null">#{content},</if>
+            <if test="teacherContent != null">#{teacherContent},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateSysStudentComment" parameterType="SysStudentComment">
+        update sys_student_comment
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="studentId != null">student_id = #{studentId},</if>
+            <if test="semesterId != null">semester_id = #{semesterId},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="teacherContent != null">teacher_content = #{teacherContent},</if>
+        </trim>
+        where student_comment_id = #{studentCommentId}
+    </update>
+
+    <delete id="deleteSysStudentCommentByStudentCommentId" parameterType="Long">
+        delete
+        from sys_student_comment
+        where student_comment_id = #{studentCommentId}
+    </delete>
+
+    <delete id="deleteSysStudentCommentByStudentCommentIds" parameterType="String">
+        delete from sys_student_comment where student_comment_id in
+        <foreach item="studentCommentId" collection="array" open="(" separator="," close=")">
+            #{studentCommentId}
+        </foreach>
+    </delete>
+</mapper>
